@@ -8,16 +8,38 @@
     "scheme": "shopsage",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.shopsagemobile"
+      "package": "com.ahalsudev.shopsagemobile",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "shopsage.tech"
+            },
+            {
+              "scheme": "shopsage"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "queries": [
+        "phantom",
+        "phantom-deeplink", 
+        "phantom-wallet",
+        "solana-wallet"
+      ]
     },
     "web": {
       "bundler": "metro",

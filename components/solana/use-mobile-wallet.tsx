@@ -15,9 +15,18 @@ export function useMobileWallet() {
 
   const signIn = useCallback(
     async (signInPayload: SignInPayload): Promise<Account> => {
-      return await transact(async (wallet) => {
-        return await authorizeSessionWithSignIn(wallet, signInPayload)
-      })
+      console.log('useMobileWallet.signIn called with:', signInPayload)
+      try {
+        const result = await transact(async (wallet) => {
+          console.log('transact callback called, wallet:', wallet)
+          return await authorizeSessionWithSignIn(wallet, signInPayload)
+        })
+        console.log('signIn successful:', result)
+        return result
+      } catch (error) {
+        console.error('signIn failed:', error)
+        throw error
+      }
     },
     [authorizeSessionWithSignIn],
   )

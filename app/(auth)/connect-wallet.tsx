@@ -13,29 +13,26 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ConnectWalletScreen() {
-  const { signIn, isLoading } = useAuth();
+  const { user, signIn, isLoading, updateUser } = useAuth();
   const [userType, setUserType] = useState<'shopper' | 'expert'>('shopper');
   const [name, setName] = useState('');
   const router = useRouter();
 
   const handleConnect = async () => {
-
     if (!name.trim()) {
       Alert.alert('Error', 'Please enter your name');
       return;
     }
 
     try {
-      await signIn().then((accounts) => {
-        console.log(accounts)
+      await signIn();
+
+      await updateUser({
+        name: name.trim(),
+        userType: userType
       });
 
-      // Navigate based on user type
-      if (userType === 'expert') {
-        router.push('/(expert)/registration');
-      } else {
-        router.push('/(profile)/home');
-      }
+      router.push('/(profile)/home');
     } catch (error) {
       Alert.alert('Connection Failed', error instanceof Error ? error.message : 'Failed to connect wallet');
     }
