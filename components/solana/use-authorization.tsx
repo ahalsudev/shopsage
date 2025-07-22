@@ -1,22 +1,22 @@
+import { useCluster } from '@/components/cluster/cluster-provider'
+import { AppConfig } from '@/constants/app-config'
+import { ellipsify } from '@/utils/ellipsify'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { PublicKey, PublicKeyInitData } from '@solana/web3.js'
 import {
-  Account as AuthorizedAccount,
   AppIdentity,
   AuthorizationResult,
   AuthorizeAPI,
+  Account as AuthorizedAccount,
   AuthToken,
   Base64EncodedAddress,
   DeauthorizeAPI,
   SignInPayload,
 } from '@solana-mobile/mobile-wallet-adapter-protocol'
-import { toUint8Array } from 'js-base64'
+import { PublicKey, PublicKeyInitData } from '@solana/web3.js'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useMemo } from 'react'
-import { useCluster } from '@/components/cluster/cluster-provider'
 import { WalletIcon } from '@wallet-standard/core'
-import { ellipsify } from '@/utils/ellipsify'
-import { AppConfig } from '@/constants/app-config'
+import { toUint8Array } from 'js-base64'
+import { useCallback, useMemo } from 'react'
 
 const identity: AppIdentity = { name: AppConfig.name, uri: AppConfig.uri }
 
@@ -153,6 +153,7 @@ export function useAuthorization() {
         auth_token: fetchQuery.data?.authToken,
         sign_in_payload: signInPayload,
       })
+      console.log("reached here - authorizeSessionWithSignIn")
       return (await handleAuthorizationResult(authorizationResult)).selectedAccount
     },
     [fetchQuery.data?.authToken, handleAuthorizationResult, selectedCluster.id],
