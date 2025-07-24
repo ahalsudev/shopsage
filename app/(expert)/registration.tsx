@@ -2,6 +2,7 @@ import { AppDispatch, RootState } from '@/store';
 import { createCurrentUserProfile } from '@/store/thunks/expertThunks';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -57,7 +58,7 @@ const ExpertRegistrationScreen: React.FC = () => {
           [
             {
               text: 'OK',
-              onPress: () => navigation.navigate('Home'),
+              onPress: () => router.push('/(expert)/profile-management'),
             },
           ]
         );

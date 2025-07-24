@@ -1,7 +1,7 @@
 import { useAuth } from '@/components/auth/auth-provider';
 import { useCustomAlert } from '@/components/CustomAlert';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -15,10 +15,12 @@ const ProfileScreen: React.FC = () => {
   const { user, signOut } = useAuth();
   const { showAlert, AlertComponent } = useCustomAlert();
 
-  // If user is an expert, show the expert profile management screen
-  if (user?.userType === 'expert') {
-    router.push('/(expert)/profile-management')
-  }
+  // If user is an expert, redirect to expert profile management screen
+  useEffect(() => {
+    if (user?.userType === 'expert') {
+      router.push('/(expert)/profile-management');
+    }
+  }, [user?.userType]);
 
   const handleLogout = () => {
     showAlert(

@@ -6,6 +6,7 @@ import {
 } from '@/store/thunks/expertThunks';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -128,12 +129,25 @@ const ExpertProfileManagementScreen: React.FC = () => {
     );
   }
 
-  if (!currentUserProfile) {
+  if (!currentUserProfile && !profileLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>No profile found</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(fetchCurrentUserProfile())}>
+          <Text style={styles.errorIcon}>👨‍💼</Text>
+          <Text style={styles.errorTitle}>Create Your Expert Profile</Text>
+          <Text style={styles.errorText}>
+            You need to complete your expert profile to start helping shoppers.
+          </Text>
+          <TouchableOpacity 
+            style={styles.createProfileButton} 
+            onPress={() => router.push('/(expert)/registration')}
+          >
+            <Text style={styles.createProfileButtonText}>Create Profile</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={() => dispatch(fetchCurrentUserProfile())}
+          >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -325,11 +339,38 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 32,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   errorText: {
     fontSize: 16,
-    color: '#ef4444',
-    marginBottom: 16,
+    color: '#64748b',
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  createProfileButton: {
+    backgroundColor: '#6366f1',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  createProfileButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   retryButton: {
     backgroundColor: '#6366f1',

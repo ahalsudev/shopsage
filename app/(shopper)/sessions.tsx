@@ -8,7 +8,11 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
+import { sessionService, SessionWithDetails } from '@/services/sessionService';
+import { LoadingSpinner, LoadingState } from '@/components/common/LoadingSpinner';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 interface Session {
   id: string;
@@ -17,7 +21,7 @@ interface Session {
   expertSpecialization: string;
   date: string;
   duration: number;
-  status: 'completed' | 'cancelled' | 'upcoming';
+  status: 'completed' | 'cancelled' | 'upcoming' | 'pending' | 'active';
   cost: number;
   rating?: number;
   review?: string;
@@ -27,53 +31,99 @@ const SessionsScreen: React.FC = () => {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     loadSessions();
   }, []);
 
-  const loadSessions = async () => {
-    setIsLoading(true);
-    
-    const mockSessions: Session[] = [
-      {
-        id: '1',
-        expertId: '1',
-        expertName: 'Dr. Sarah Johnson',
-        expertSpecialization: 'Fashion & Style',
-        date: '2024-01-15T14:30:00Z',
-        duration: 5,
-        status: 'completed',
-        cost: 0.01,
-        rating: 5,
-        review: 'Excellent advice on wardrobe choices!',
-      },
-      {
-        id: '2',
-        expertId: '2',
-        expertName: 'Mike Chen',
-        expertSpecialization: 'Tech & Gadgets',
-        date: '2024-01-12T10:00:00Z',
-        duration: 5,
-        status: 'completed',
-        cost: 0.01,
-        rating: 4,
-        review: 'Very helpful with laptop recommendations.',
-      },
-      {
-        id: '3',
-        expertId: '3',
-        expertName: 'Emma Davis',
-        expertSpecialization: 'Home & Garden',
-        date: '2024-01-20T16:00:00Z',
-        duration: 5,
-        status: 'upcoming',
-        cost: 0.01,
-      },
-    ];
+  const loadSessions = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
+      setError(null);
+      
+      const sessionData = await sessionService.getUserSessions();
+      
+      // Convert backend session format to component format
+      const formattedSessions: Session[] = sessionData.map((session: SessionWithDetails) => ({
+        id: session.id,
+        expertId: session.expertId,
+        expertName: session.expertName,
+        expertSpecialization: session.expertSpecialization,
+        date: session.startTime,
+        duration: 5, // Default duration - could be calculated from start/end time
+        status: mapSessionStatus(session.status),
+        cost: parseFloat(session.amount),
+        // TODO: Add rating and review from backend when implemented
+      }));
+      
+      setSessions(formattedSessions);
+    } catch (err) {
+      console.error('Failed to load sessions:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load sessions');
+      
+      // Fallback to mock data if API fails
+      const mockSessions: Session[] = [
+        {
+          id: '1',
+          expertId: '1',
+          expertName: 'Dr. Sarah Johnson',
+          expertSpecialization: 'Fashion & Style',
+          date: '2024-01-15T14:30:00Z',
+          duration: 5,
+          status: 'completed',
+          cost: 0.01,
+          rating: 5,
+          review: 'Excellent advice on wardrobe choices!',
+        },
+        {
+          id: '2',
+          expertId: '2',
+          expertName: 'Mike Chen',
+          expertSpecialization: 'Tech & Gadgets',
+          date: '2024-01-12T10:00:00Z',
+          duration: 5,
+          status: 'completed',
+          cost: 0.01,
+          rating: 4,
+          review: 'Very helpful with laptop recommendations.',
+        },
+        {
+          id: '3',
+          expertId: '3',
+          expertName: 'Emma Davis',
+          expertSpecialization: 'Home & Garden',
+          date: '2024-01-20T16:00:00Z',
+          duration: 5,
+          status: 'upcoming',
+          cost: 0.01,
+        },
+      ];
+      setSessions(mockSessions);
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-    setSessions(mockSessions);
-    setIsLoading(false);
+  const mapSessionStatus = (backendStatus: string): Session['status'] => {
+    switch (backendStatus) {
+      case 'pending':
+        return 'upcoming';
+      case 'active':
+        return 'upcoming';
+      case 'completed':
+        return 'completed';
+      case 'cancelled':
+        return 'cancelled';
+      default:
+        return 'upcoming';
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -102,10 +152,25 @@ const SessionsScreen: React.FC = () => {
 
   const handleSessionPress = (session: Session) => {
     if (session.status === 'upcoming') {
-      router.push(`/(call)/video-call?sessionId=${session.id}&expertId=${session.expertId}`);
+      Alert.alert(
+        'Join Session',
+        `Are you ready to start your consultation with ${session.expertName}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Join', 
+            onPress: () => router.push(`/(call)/video-call?sessionId=${session.id}&expertId=${session.expertId}`)
+          },
+        ]
+      );
     } else {
-      console.log('Show session details:', session.id);
+      // TODO: Show session details modal
+      Alert.alert('Session Details', `Session ${session.id} details would be shown here.`);
     }
+  };
+
+  const handleRetry = () => {
+    loadSessions();
   };
 
   const renderSessionCard = ({ item }: { item: Session }) => (
@@ -166,18 +231,37 @@ const SessionsScreen: React.FC = () => {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading sessions...</Text>
+        <LoadingSpinner message="Loading your sessions..." />
+      </SafeAreaView>
+    );
+  }
+
+  if (error && sessions.length === 0) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorIcon}>⚠️</Text>
+          <Text style={styles.errorTitle}>Failed to Load Sessions</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {sessions.length === 0 ? (
+    <ErrorBoundary>
+      <SafeAreaView style={styles.container}>
+        {error && sessions.length > 0 && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>Some data may be outdated</Text>
+          </View>
+        )}
+        {sessions.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>=�</Text>
+          <Text style={styles.emptyIcon}>=�</Text>
           <Text style={styles.emptyTitle}>No Sessions Yet</Text>
           <Text style={styles.emptyText}>
             You haven't booked any consultation sessions yet. Start by finding an expert!
@@ -196,9 +280,12 @@ const SessionsScreen: React.FC = () => {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={() => loadSessions(true)}
         />
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </ErrorBoundary>
   );
 };
 
@@ -345,6 +432,53 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#6366f1',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorBanner: {
+    backgroundColor: '#fef3c7',
+    padding: 12,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  errorBannerText: {
+    fontSize: 14,
+    color: '#92400e',
+    fontWeight: '500',
   },
 });
 
