@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack } from 'expo-router'
 
 export default function ProfileLayout() {
   return (
@@ -15,14 +15,8 @@ export default function ProfileLayout() {
         },
       }}
     >
-      <Stack.Screen
-        name="home"
-        options={{ title: 'Home' }}
-      />
-      <Stack.Screen
-        name="profile"
-        options={{ title: 'My Profile' }}
-      />
+      <Stack.Screen name="home" options={{ title: 'Home' }} />
+      <Stack.Screen name="profile" options={{ title: 'My Profile' }} />
     </Stack>
-  );
+  )
 }

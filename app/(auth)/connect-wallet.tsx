@@ -1,117 +1,80 @@
-import { useAuth } from '@/components/auth/auth-provider';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '@/components/auth/auth-provider'
+import { authService } from '@/services/authService'
+import { userService } from '@/services/userService'
+import { useRouter } from 'expo-router'
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function ConnectWalletScreen() {
-  const { user, signIn, isLoading, updateUser } = useAuth();
-  const [userType, setUserType] = useState<'shopper' | 'expert'>('shopper');
-  const [name, setName] = useState('');
-  const router = useRouter();
+  const { signIn, isLoading, updateUser } = useAuth()
+  const router = useRouter()
 
   const handleConnect = async () => {
-    if (!name.trim()) {
-      Alert.alert('Error', 'Please enter your name');
-      return;
-    }
-
     try {
-      await signIn();
+      // First check if user data exists locally (they haven't logged out)
+      const existingUserData = await userService.loadUserDataLocally()
 
-      await updateUser({
-        name: name.trim(),
-        userType: userType
-      });
+      // Connect wallet to get account
+      let account = await signIn()
+      const walletAddress = account.publicKey.toString()
 
-      router.push('/(profile)/home');
+      if (existingUserData && existingUserData.profile.walletAddress === walletAddress) {
+        // User has local data for this wallet - just login with backend and redirect
+        console.log('Found existing user data locally, logging in...')
+        try {
+          const loginResponse = await authService.loginUser(walletAddress)
+          if (loginResponse !== 404) {
+            // Update local data with any backend changes
+            await updateUser({ profile: loginResponse.user.profile })
+            router.push('/(profile)/home')
+            return
+          }
+        } catch (error) {
+          console.log('Backend login failed, using local data:', error)
+          // Fallback to local data if backend fails
+          router.push('/(profile)/home')
+          return
+        }
+      }
+
+      // No local data or different wallet - try to login with backend
+      console.log('No local data found, checking if user exists in backend...')
+      const loginResponse = await authService.loginUser(walletAddress)
+
+      if (loginResponse === 404) {
+        // User doesn't exist - redirect to registration
+        console.log('User not found, redirecting to registration...')
+        router.push('/complete-profile')
+      } else {
+        // User exists in backend - save their data and redirect to profile
+        console.log('User found in backend, logging in...')
+        await updateUser({ profile: loginResponse.user.profile })
+        router.push('/(profile)/home')
+      }
     } catch (error) {
-      Alert.alert('Connection Failed', error instanceof Error ? error.message : 'Failed to connect wallet');
+      Alert.alert('Connection Failed', error instanceof Error ? error.message : 'Failed to connect wallet')
     }
-  };
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Connect Your Wallet</Text>
-          <Text style={styles.subtitle}>
-            Connect your Solana wallet to get started with ShopSage
-          </Text>
+          <Text style={styles.subtitle}>Connect your Solana wallet to get started with ShopSage</Text>
         </View>
 
-        {/* User Type Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>I want to:</Text>
-          <View style={styles.userTypeContainer}>
-            <TouchableOpacity
-              style={[
-                styles.userTypeButton,
-                userType === 'shopper' && styles.userTypeButtonActive,
-              ]}
-              onPress={() => setUserType('shopper')}
-            >
-              <Text
-                style={[
-                  styles.userTypeText,
-                  userType === 'shopper' && styles.userTypeTextActive,
-                ]}
-              >
-                🛍️ Get Shopping Advice
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.userTypeButton,
-                userType === 'expert' && styles.userTypeButtonActive,
-              ]}
-              onPress={() => setUserType('expert')}
-            >
-              <Text
-                style={[
-                  styles.userTypeText,
-                  userType === 'expert' && styles.userTypeTextActive,
-                ]}
-              >
-                🎯 Provide Expert Advice
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Name Input */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Your Name</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Enter your name"
-            autoCapitalize="words"
-          />
-        </View>
         {/* Connect Button */}
         <TouchableOpacity
           style={[styles.connectButton, isLoading && styles.connectButtonDisabled]}
           onPress={handleConnect}
           disabled={isLoading}
         >
-          <Text style={styles.connectButtonText}>
-            {isLoading ? 'Connecting...' : 'Connect Wallet'}
-          </Text>
+          <Text style={styles.connectButtonText}>{isLoading ? 'Connecting...' : 'Connect Wallet'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -223,4 +186,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-});
+})

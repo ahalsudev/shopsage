@@ -1,20 +1,15 @@
-import { useCustomAlert } from '@/components/CustomAlert';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-
+import { useCustomAlert } from '@/components/CustomAlert'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import React from 'react'
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native'
+import { videoCallNavigation } from '@/utils/videoCallNavigation'
+import { useAuth } from '@/components/auth/auth-provider'
 
 const ExpertDetailScreen: React.FC = () => {
-  const { expertId } = useLocalSearchParams();
-  const router = useRouter();
-  const { showAlert, AlertComponent } = useCustomAlert();
+  const { expertId } = useLocalSearchParams()
+  const router = useRouter()
+  const { showAlert, AlertComponent } = useCustomAlert()
+  const { user } = useAuth()
 
   // Mock expert data - replace with actual data fetching
   const expert = {
@@ -28,24 +23,52 @@ const ExpertDetailScreen: React.FC = () => {
     isVerified: true,
     isOnline: true,
     profileImageUrl: null,
-  };
+  }
 
-  const handleBookConsultation = () => {
+  const handleBookConsultation = async () => {
     showAlert(
-      'Book Consultation',
-      `Book a 5-minute consultation with ${expert.name} for ${expert.hourlyRate} SOL?`,
+      'Book Consultation', 
+      `Book a 5-minute consultation with ${expert.name} for ${expert.hourlyRate} SOL?`, 
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Book Now',
-          onPress: () => {
-            // Navigate to video call screen
-            router.push(`/(call)/video-call?sessionId=${"mock-session-id"}&expertId=${expert.id}`);
+          text: 'Start Video Call',
+          onPress: async () => {
+            try {
+              if (!user?.profile?.id) {
+                Alert.alert('Error', 'Please log in to book a consultation');
+                return;
+              }
+
+              // Check if video calling is available
+              const isAvailable = await videoCallNavigation.isVideoCallAvailable();
+              if (!isAvailable) {
+                Alert.alert(
+                  'Video Call Unavailable', 
+                  'Video calling is not configured. Please check your settings.'
+                );
+                return;
+              }
+
+              // Generate a session ID for this consultation
+              const sessionId = `session_${user.profile.id}_${expertId}_${Date.now()}`;
+
+              // Start video call directly (this creates the session)
+              await videoCallNavigation.startVideoCall({
+                sessionId,
+                userId: user.profile.id,
+                participantIds: [user.profile.id, expertId as string],
+              });
+
+            } catch (error) {
+              console.error('Failed to start video call:', error);
+              Alert.alert('Error', 'Failed to start video call. Please try again.');
+            }
           },
         },
       ]
     );
-  };
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -54,18 +77,14 @@ const ExpertDetailScreen: React.FC = () => {
         <View style={styles.header}>
           <View style={styles.profileSection}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {expert.name.charAt(0)}
-              </Text>
+              <Text style={styles.avatarText}>{expert.name.charAt(0)}</Text>
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.expertName}>{expert.name}</Text>
               <Text style={styles.specialization}>{expert.specialization}</Text>
               <View style={styles.statusContainer}>
                 <View style={[styles.statusIndicator, { backgroundColor: expert.isOnline ? '#10b981' : '#6b7280' }]} />
-                <Text style={styles.statusText}>
-                  {expert.isOnline ? 'Online' : 'Offline'}
-                </Text>
+                <Text style={styles.statusText}>{expert.isOnline ? 'Online' : 'Offline'}</Text>
               </View>
             </View>
           </View>
@@ -119,16 +138,14 @@ const ExpertDetailScreen: React.FC = () => {
             onPress={handleBookConsultation}
             disabled={!expert.isOnline}
           >
-            <Text style={styles.bookButtonText}>
-              {expert.isOnline ? 'Book Consultation' : 'Currently Offline'}
-            </Text>
+            <Text style={styles.bookButtonText}>{expert.isOnline ? 'Book Consultation' : 'Currently Offline'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
       {AlertComponent}
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -265,6 +282,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-});
+})
 
-export default ExpertDetailScreen; 
+export default ExpertDetailScreen

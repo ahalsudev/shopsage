@@ -1,44 +1,35 @@
-import { AppDispatch, RootState } from '@/store';
-import { createCurrentUserProfile } from '@/store/thunks/expertThunks';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
-import {
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootStackParamList } from '../_layout';
+import { AppDispatch, RootState } from '@/store'
+import { createCurrentUserProfile } from '@/store/thunks/expertThunks'
+import { useNavigation } from '@react-navigation/native'
+import { StackNavigationProp } from '@react-navigation/stack'
+import { router } from 'expo-router'
+import React, { useState } from 'react'
+import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { useDispatch, useSelector } from 'react-redux'
+import { RootStackParamList } from '../_layout'
 
-type ExpertRegistrationScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ExpertRegistration'>;
+type ExpertRegistrationScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ExpertRegistration'>
 
 const ExpertRegistrationScreen: React.FC = () => {
-  const navigation = useNavigation<ExpertRegistrationScreenNavigationProp>();
-  const dispatch = useDispatch<AppDispatch>();
-  const { profileLoading, profileError } = useSelector((state: RootState) => state.experts);
+  const navigation = useNavigation<ExpertRegistrationScreenNavigationProp>()
+  const dispatch = useDispatch<AppDispatch>()
+  const { profileLoading, profileError } = useSelector((state: RootState) => state.experts)
 
-  const [specialization, setSpecialization] = useState('');
-  const [bio, setBio] = useState('');
-  const [hourlyRate, setHourlyRate] = useState('');
-  const [profileImageUrl, setProfileImageUrl] = useState('');
+  const [specialization, setSpecialization] = useState('')
+  const [bio, setBio] = useState('')
+  const [hourlyRate, setHourlyRate] = useState('')
+  const [profileImageUrl, setProfileImageUrl] = useState('')
 
   const handleCreateProfile = async () => {
     if (!specialization.trim() || !hourlyRate.trim()) {
-      Alert.alert('Error', 'Please fill in specialization and hourly rate');
-      return;
+      Alert.alert('Error', 'Please fill in specialization and hourly rate')
+      return
     }
 
-    const rate = parseFloat(hourlyRate);
+    const rate = parseFloat(hourlyRate)
     if (isNaN(rate) || rate <= 0) {
-      Alert.alert('Error', 'Please enter a valid hourly rate');
-      return;
+      Alert.alert('Error', 'Please enter a valid hourly rate')
+      return
     }
 
     const profileData = {
@@ -46,39 +37,33 @@ const ExpertRegistrationScreen: React.FC = () => {
       bio: bio.trim() || undefined,
       hourlyRate: rate,
       profileImageUrl: profileImageUrl.trim() || undefined,
-    };
+    }
 
     try {
-      const result = await dispatch(createCurrentUserProfile(profileData));
+      const result = await dispatch(createCurrentUserProfile(profileData))
 
       if (createCurrentUserProfile.fulfilled.match(result)) {
-        Alert.alert(
-          'Success',
-          'Your expert profile has been created successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.push('/(expert)/profile-management'),
-            },
-          ]
-        );
+        Alert.alert('Success', 'Your expert profile has been created successfully!', [
+          {
+            text: 'OK',
+            onPress: () => router.push('/(expert)/profile-management'),
+          },
+        ])
       } else {
-        Alert.alert('Error', result.payload as string || 'Failed to create expert profile');
+        Alert.alert('Error', (result.payload as string) || 'Failed to create expert profile')
       }
     } catch (error) {
-      console.error('Error creating expert profile:', error);
-      Alert.alert('Error', 'Failed to create expert profile. Please try again.');
+      console.error('Error creating expert profile:', error)
+      Alert.alert('Error', 'Failed to create expert profile. Please try again.')
     }
-  };
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <Text style={styles.title}>Complete Your Expert Profile</Text>
-          <Text style={styles.subtitle}>
-            Tell us about your expertise to start helping shoppers
-          </Text>
+          <Text style={styles.subtitle}>Tell us about your expertise to start helping shoppers</Text>
 
           {/* Specialization Input */}
           <View style={styles.inputContainer}>
@@ -117,9 +102,7 @@ const ExpertRegistrationScreen: React.FC = () => {
               placeholderTextColor="#9ca3af"
               keyboardType="decimal-pad"
             />
-            <Text style={styles.helpText}>
-              Note: You'll receive 80% of the consultation fee
-            </Text>
+            <Text style={styles.helpText}>Note: You'll receive 80% of the consultation fee</Text>
           </View>
 
           {/* Profile Image URL Input */}
@@ -156,8 +139,8 @@ const ExpertRegistrationScreen: React.FC = () => {
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -241,6 +224,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-});
+})
 
-export default ExpertRegistrationScreen;
+export default ExpertRegistrationScreen

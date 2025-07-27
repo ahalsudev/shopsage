@@ -1,54 +1,47 @@
-import { useAuth } from '@/components/auth/auth-provider';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import {
-  FlatList,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-  Alert,
-} from 'react-native';
-import { sessionService, SessionWithDetails } from '@/services/sessionService';
-import { LoadingSpinner, LoadingState } from '@/components/common/LoadingSpinner';
-import ErrorBoundary from '@/components/common/ErrorBoundary';
+import { useAuth } from '@/components/auth/auth-provider'
+import { router } from 'expo-router'
+import React, { useEffect, useState } from 'react'
+import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native'
+import { sessionService, SessionWithDetails } from '@/services/sessionService'
+import { LoadingSpinner, LoadingState } from '@/components/common/LoadingSpinner'
+import ErrorBoundary from '@/components/common/ErrorBoundary'
+import { videoCallNavigation } from '@/utils/videoCallNavigation'
 
 interface Session {
-  id: string;
-  expertId: string;
-  expertName: string;
-  expertSpecialization: string;
-  date: string;
-  duration: number;
-  status: 'completed' | 'cancelled' | 'upcoming' | 'pending' | 'active';
-  cost: number;
-  rating?: number;
-  review?: string;
+  id: string
+  expertId: string
+  expertName: string
+  expertSpecialization: string
+  date: string
+  duration: number
+  status: 'completed' | 'cancelled' | 'upcoming' | 'pending' | 'active'
+  cost: number
+  rating?: number
+  review?: string
 }
 
 const SessionsScreen: React.FC = () => {
-  const { user } = useAuth();
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const { user } = useAuth()
+  const [sessions, setSessions] = useState<Session[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    loadSessions();
-  }, []);
+    loadSessions()
+  }, [])
 
   const loadSessions = async (isRefresh = false) => {
     try {
       if (isRefresh) {
-        setRefreshing(true);
+        setRefreshing(true)
       } else {
-        setIsLoading(true);
+        setIsLoading(true)
       }
-      setError(null);
-      
-      const sessionData = await sessionService.getUserSessions();
-      
+      setError(null)
+
+      const sessionData = await sessionService.getUserSessions()
+
       // Convert backend session format to component format
       const formattedSessions: Session[] = sessionData.map((session: SessionWithDetails) => ({
         id: session.id,
@@ -60,13 +53,13 @@ const SessionsScreen: React.FC = () => {
         status: mapSessionStatus(session.status),
         cost: parseFloat(session.amount),
         // TODO: Add rating and review from backend when implemented
-      }));
-      
-      setSessions(formattedSessions);
+      }))
+
+      setSessions(formattedSessions)
     } catch (err) {
-      console.error('Failed to load sessions:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load sessions');
-      
+      console.error('Failed to load sessions:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load sessions')
+
       // Fallback to mock data if API fails
       const mockSessions: Session[] = [
         {
@@ -103,81 +96,122 @@ const SessionsScreen: React.FC = () => {
           status: 'upcoming',
           cost: 0.01,
         },
-      ];
-      setSessions(mockSessions);
+      ]
+      setSessions(mockSessions)
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      setIsLoading(false)
+      setRefreshing(false)
     }
-  };
+  }
 
   const mapSessionStatus = (backendStatus: string): Session['status'] => {
     switch (backendStatus) {
       case 'pending':
-        return 'upcoming';
+        return 'upcoming'
       case 'active':
-        return 'upcoming';
+        return 'upcoming'
       case 'completed':
-        return 'completed';
+        return 'completed'
       case 'cancelled':
-        return 'cancelled';
+        return 'cancelled'
       default:
-        return 'upcoming';
+        return 'upcoming'
     }
-  };
+  }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    });
-  };
+    })
+  }
 
   const getStatusColor = (status: Session['status']) => {
     switch (status) {
       case 'completed':
-        return '#10b981';
+        return '#10b981'
       case 'upcoming':
-        return '#6366f1';
+        return '#6366f1'
       case 'cancelled':
-        return '#ef4444';
+        return '#ef4444'
       default:
-        return '#6b7280';
+        return '#6b7280'
     }
-  };
+  }
 
-  const handleSessionPress = (session: Session) => {
+  const handleSessionPress = async (session: Session) => {
     if (session.status === 'upcoming') {
-      Alert.alert(
-        'Join Session',
-        `Are you ready to start your consultation with ${session.expertName}?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Join', 
-            onPress: () => router.push(`/(call)/video-call?sessionId=${session.id}&expertId=${session.expertId}`)
+      Alert.alert('Join Session', `Are you ready to start your consultation with ${session.expertName}?`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Join Video Call',
+          onPress: async () => {
+            try {
+              if (!user?.profile?.id) {
+                Alert.alert('Error', 'User not authenticated');
+                return;
+              }
+
+              // Check if video calling is available
+              const isAvailable = await videoCallNavigation.isVideoCallAvailable();
+              if (!isAvailable) {
+                Alert.alert('Video Call Unavailable', 'Video calling is not configured. Please check your settings.');
+                return;
+              }
+
+              // Start video call with both participants
+              await videoCallNavigation.startVideoCall({
+                sessionId: session.id,
+                userId: user.profile.id,
+                participantIds: [user.profile.id, session.expertId],
+              });
+            } catch (error) {
+              console.error('Failed to start video call:', error);
+              Alert.alert('Error', 'Failed to start video call. Please try again.');
+            }
           },
-        ]
-      );
+        },
+      ])
+    } else if (session.status === 'active') {
+      // For active sessions, allow joining existing call
+      Alert.alert('Rejoin Session', 'This session is already in progress. Would you like to rejoin?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Rejoin Call',
+          onPress: async () => {
+            try {
+              if (!user?.profile?.id) {
+                Alert.alert('Error', 'User not authenticated');
+                return;
+              }
+
+              await videoCallNavigation.joinVideoCall({
+                sessionId: session.id,
+                userId: user.profile.id,
+              });
+            } catch (error) {
+              console.error('Failed to join video call:', error);
+              Alert.alert('Error', 'Failed to join video call. Please try again.');
+            }
+          },
+        },
+      ])
     } else {
       // TODO: Show session details modal
-      Alert.alert('Session Details', `Session ${session.id} details would be shown here.`);
+      Alert.alert('Session Details', `Session ${session.id} details would be shown here.`)
     }
-  };
+  }
 
   const handleRetry = () => {
-    loadSessions();
-  };
+    loadSessions()
+  }
 
   const renderSessionCard = ({ item }: { item: Session }) => (
-    <TouchableOpacity 
-      style={styles.sessionCard} 
-      onPress={() => handleSessionPress(item)}
-    >
+    <TouchableOpacity style={styles.sessionCard} onPress={() => handleSessionPress(item)}>
       <View style={styles.sessionHeader}>
         <View style={styles.sessionInfo}>
           <Text style={styles.expertName}>{item.expertName}</Text>
@@ -185,12 +219,7 @@ const SessionsScreen: React.FC = () => {
           <Text style={styles.date}>{formatDate(item.date)}</Text>
         </View>
         <View style={styles.sessionStatus}>
-          <View 
-            style={[
-              styles.statusIndicator, 
-              { backgroundColor: getStatusColor(item.status) }
-            ]} 
-          />
+          <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
           <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
             {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
           </Text>
@@ -226,14 +255,14 @@ const SessionsScreen: React.FC = () => {
         </View>
       )}
     </TouchableOpacity>
-  );
+  )
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <LoadingSpinner message="Loading your sessions..." />
       </SafeAreaView>
-    );
+    )
   }
 
   if (error && sessions.length === 0) {
@@ -248,7 +277,7 @@ const SessionsScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-    );
+    )
   }
 
   return (
@@ -260,34 +289,31 @@ const SessionsScreen: React.FC = () => {
           </View>
         )}
         {sessions.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>=�</Text>
-          <Text style={styles.emptyTitle}>No Sessions Yet</Text>
-          <Text style={styles.emptyText}>
-            You haven't booked any consultation sessions yet. Start by finding an expert!
-          </Text>
-          <TouchableOpacity 
-            style={styles.emptyButton}
-            onPress={() => router.push('/(expert)/list')}
-          >
-            <Text style={styles.emptyButtonText}>Find Experts</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={sessions}
-          renderItem={renderSessionCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          refreshing={refreshing}
-          onRefresh={() => loadSessions(true)}
-        />
-      )}
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>=�</Text>
+            <Text style={styles.emptyTitle}>No Sessions Yet</Text>
+            <Text style={styles.emptyText}>
+              You haven't booked any consultation sessions yet. Start by finding an expert!
+            </Text>
+            <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(expert)/list')}>
+              <Text style={styles.emptyButtonText}>Find Experts</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={sessions}
+            renderItem={renderSessionCard}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContainer}
+            showsVerticalScrollIndicator={false}
+            refreshing={refreshing}
+            onRefresh={() => loadSessions(true)}
+          />
+        )}
       </SafeAreaView>
     </ErrorBoundary>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -480,6 +506,6 @@ const styles = StyleSheet.create({
     color: '#92400e',
     fontWeight: '500',
   },
-});
+})
 
-export default SessionsScreen;
+export default SessionsScreen

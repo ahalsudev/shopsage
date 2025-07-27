@@ -1,222 +1,457 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import { Session } from '../store/slices/sessionSlice';
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import axios from 'axios'
+import { v4 as uuidv4 } from 'react-native-uuid'
+import { AppConfig, log } from '../config/environment'
+import { dataProvider } from './dataProvider'
+import { paymentService } from './paymentService'
+import { videoCallService, VideoCallCredentials } from './videoCallService'
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://172.20.10.8:3001/api';
+const API_BASE_URL = AppConfig.api.baseUrl
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-});
+})
 
 // Add token to requests if available
 api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('token');
+  const token = await AsyncStorage.getItem('token')
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers.Authorization = `Bearer ${token}`
   }
-  return config;
-});
+  return config
+})
 
 export interface CreateSessionRequest {
-  expertId: string;
-  startTime: string; // ISO 8601 format
-  amount: string; // BigDecimal as string
+  expertId: string
+  startTime: string // ISO 8601 format
+  amount: string // BigDecimal as string
 }
 
 export interface UpdateSessionRequest {
-  status?: 'pending' | 'active' | 'completed' | 'cancelled';
-  endTime?: string;
-  paymentStatus?: 'pending' | 'completed' | 'failed';
-  transactionHash?: string;
+  status?: 'pending' | 'active' | 'completed' | 'cancelled'
+  endTime?: string
+  paymentStatus?: 'pending' | 'completed' | 'failed'
+  transactionHash?: string
 }
 
 export interface SessionWithDetails {
-  id: string;
-  expertId: string;
-  expertName: string;
-  expertSpecialization: string;
-  shopperId: string;
-  shopperName: string;
-  startTime: string;
-  endTime?: string;
-  status: 'pending' | 'active' | 'completed' | 'cancelled';
-  amount: string;
-  paymentStatus: 'pending' | 'completed' | 'failed';
-  transactionHash?: string;
-  createdAt: string;
-  updatedAt: string;
+  id: string
+  expertId: string
+  expertName: string
+  expertSpecialization: string
+  shopperId: string
+  shopperName: string
+  startTime: string
+  endTime?: string
+  status: 'pending' | 'active' | 'completed' | 'cancelled'
+  amount: string
+  paymentStatus: 'pending' | 'completed' | 'failed'
+  transactionHash?: string
+  createdAt: string
+  updatedAt: string
+  videoCallId?: string
+  videoCallCredentials?: VideoCallCredentials
 }
 
 export interface SessionResponse {
-  id: string;
-  expertId: string;
-  shopperId: string;
-  status: string;
-  amount: string;
-  createdAt: string;
+  id: string
+  expertId: string
+  shopperId: string
+  status: string
+  amount: string
+  createdAt: string
 }
 
 export interface SessionsListResponse {
-  sessions: SessionWithDetails[];
+  sessions: SessionWithDetails[]
 }
 
 export const sessionService = {
   async createSession(sessionData: CreateSessionRequest): Promise<SessionResponse> {
     try {
-      const response = await api.post('/sessions', {
-        expert_id: sessionData.expertId,
-        start_time: sessionData.startTime,
-        amount: sessionData.amount,
-      });
-      return {
-        id: response.data.id,
-        expertId: response.data.expert_id,
-        shopperId: response.data.shopper_id,
-        status: response.data.status,
-        amount: response.data.amount,
-        createdAt: response.data.created_at,
-      };
+      log.info('SessionService: Creating session', sessionData)
+      return await dataProvider.createSession(sessionData)
     } catch (error) {
+      log.error('Failed to create session:', error)
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to create session');
+        throw new Error(error.response?.data?.error || 'Failed to create session')
       }
-      throw error;
+      throw error
     }
   },
 
   async getSession(sessionId: string): Promise<SessionResponse> {
     try {
-      const response = await api.get(`/sessions/${sessionId}`);
-      return {
-        id: response.data.id,
-        expertId: response.data.expert_id,
-        shopperId: response.data.shopper_id,
-        status: response.data.status,
-        amount: response.data.amount,
-        createdAt: response.data.created_at,
-      };
+      log.info('SessionService: Getting session', { sessionId })
+      return await dataProvider.getSession(sessionId)
     } catch (error) {
+      log.error('Failed to get session:', error)
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get session');
+        throw new Error(error.response?.data?.error || 'Failed to get session')
       }
-      throw error;
+      throw error
     }
   },
 
   async getUserSessions(): Promise<SessionWithDetails[]> {
     try {
-      const response = await api.get('/sessions');
-      return response.data.sessions || response.data;
+      log.info('SessionService: Getting user sessions')
+      return await dataProvider.getUserSessions()
     } catch (error) {
+      log.error('Failed to get user sessions:', error)
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get sessions');
+        throw new Error(error.response?.data?.error || 'Failed to get sessions')
       }
-      throw error;
+      throw error
     }
   },
 
   async updateSession(sessionId: string, updates: UpdateSessionRequest): Promise<SessionResponse> {
     try {
-      const payload: any = {};
-      if (updates.status) payload.status = updates.status;
-      if (updates.endTime) payload.end_time = updates.endTime;
-      if (updates.paymentStatus) payload.payment_status = updates.paymentStatus;
-      if (updates.transactionHash) payload.transaction_hash = updates.transactionHash;
-
-      const response = await api.put(`/sessions/${sessionId}`, payload);
-      return {
-        id: response.data.id,
-        expertId: response.data.expert_id,
-        shopperId: response.data.shopper_id,
-        status: response.data.status,
-        amount: response.data.amount,
-        createdAt: response.data.created_at,
-      };
+      log.info('SessionService: Updating session', { sessionId, updates })
+      return await dataProvider.updateSession(sessionId, updates)
     } catch (error) {
+      log.error('Failed to update session:', error)
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to update session');
+        throw new Error(error.response?.data?.error || 'Failed to update session')
       }
-      throw error;
+      throw error
     }
   },
 
   async cancelSession(sessionId: string): Promise<SessionResponse> {
     try {
-      return await this.updateSession(sessionId, { status: 'cancelled' });
+      return await this.updateSession(sessionId, { status: 'cancelled' })
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to cancel session');
+        throw new Error(error.response?.data?.error || 'Failed to cancel session')
       }
-      throw error;
+      throw error
     }
   },
 
   async completeSession(sessionId: string): Promise<SessionResponse> {
     try {
-      return await this.updateSession(sessionId, { 
+      return await this.updateSession(sessionId, {
         status: 'completed',
-        endTime: new Date().toISOString()
-      });
+        endTime: new Date().toISOString(),
+      })
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to complete session');
+        throw new Error(error.response?.data?.error || 'Failed to complete session')
       }
-      throw error;
+      throw error
     }
   },
 
   async startSession(sessionId: string): Promise<SessionResponse> {
     try {
-      return await this.updateSession(sessionId, { status: 'active' });
+      return await this.updateSession(sessionId, { status: 'active' })
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to start session');
+        throw new Error(error.response?.data?.error || 'Failed to start session')
       }
-      throw error;
+      throw error
     }
   },
 
   async getActiveSessions(): Promise<SessionWithDetails[]> {
     try {
-      const sessions = await this.getUserSessions();
-      return sessions.filter(session => session.status === 'active');
+      const sessions = await this.getUserSessions()
+      return sessions.filter((session) => session.status === 'active')
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get active sessions');
+        throw new Error(error.response?.data?.error || 'Failed to get active sessions')
       }
-      throw error;
+      throw error
     }
   },
 
   async getUpcomingSessions(): Promise<SessionWithDetails[]> {
     try {
-      const sessions = await this.getUserSessions();
-      return sessions.filter(session => 
-        session.status === 'pending' && 
-        new Date(session.startTime) > new Date()
-      );
+      const sessions = await this.getUserSessions()
+      return sessions.filter((session) => session.status === 'pending' && new Date(session.startTime) > new Date())
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get upcoming sessions');
+        throw new Error(error.response?.data?.error || 'Failed to get upcoming sessions')
       }
-      throw error;
+      throw error
     }
   },
 
   async getPastSessions(): Promise<SessionWithDetails[]> {
     try {
-      const sessions = await this.getUserSessions();
-      return sessions.filter(session => 
-        session.status === 'completed' || session.status === 'cancelled'
-      );
+      const sessions = await this.getUserSessions()
+      return sessions.filter((session) => session.status === 'completed' || session.status === 'cancelled')
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get past sessions');
+        throw new Error(error.response?.data?.error || 'Failed to get past sessions')
       }
-      throw error;
+      throw error
     }
   },
-};
+
+  // Blockchain-integrated session methods
+  async createSessionOnChain(sessionData: CreateSessionRequest): Promise<{ sessionId: string; txId: string }> {
+    try {
+      // Generate unique session ID
+      const sessionId = uuidv4().toString()
+
+      // Create session on blockchain first
+      const { sessionTxId } = await paymentService.createSessionWithPayment(
+        sessionId,
+        sessionData.expertId,
+        parseFloat(sessionData.amount),
+      )
+
+      // Then create in backend database for UI/search purposes
+      try {
+        await this.createSession({
+          ...sessionData,
+          startTime: sessionData.startTime,
+          amount: sessionData.amount,
+        })
+      } catch (backendError) {
+        console.warn('Backend session creation failed, but blockchain session exists:', backendError)
+        // Continue since blockchain is the source of truth
+      }
+
+      return { sessionId, txId: sessionTxId }
+    } catch (error) {
+      console.error('Failed to create session on chain:', error)
+      throw new Error('Failed to create session on blockchain')
+    }
+  },
+
+  async startSessionOnChain(sessionId: string, expertWalletAddress: string): Promise<string> {
+    try {
+      // Start session on blockchain
+      const txId = await paymentService.startSessionOnChain(sessionId, expertWalletAddress)
+
+      // Update backend status for UI purposes
+      try {
+        await this.updateSession(sessionId, { status: 'active' })
+      } catch (backendError) {
+        console.warn('Backend session update failed:', backendError)
+      }
+
+      return txId
+    } catch (error) {
+      console.error('Failed to start session on chain:', error)
+      throw new Error('Failed to start session on blockchain')
+    }
+  },
+
+  async endSessionOnChain(sessionId: string, expertWalletAddress: string): Promise<string> {
+    try {
+      // End session on blockchain
+      const txId = await paymentService.endSessionOnChain(sessionId, expertWalletAddress)
+
+      // Update backend status for UI purposes
+      try {
+        await this.updateSession(sessionId, {
+          status: 'completed',
+          endTime: new Date().toISOString(),
+        })
+      } catch (backendError) {
+        console.warn('Backend session update failed:', backendError)
+      }
+
+      return txId
+    } catch (error) {
+      console.error('Failed to end session on chain:', error)
+      throw new Error('Failed to end session on blockchain')
+    }
+  },
+
+  async getSessionFromChain(sessionId: string): Promise<any> {
+    try {
+      return await paymentService.getSessionFromChain(sessionId)
+    } catch (error) {
+      console.error('Failed to get session from chain:', error)
+      return null
+    }
+  },
+
+  async syncSessionWithChain(sessionId: string): Promise<SessionWithDetails | null> {
+    try {
+      // Get session data from blockchain
+      const chainSession = await this.getSessionFromChain(sessionId)
+
+      if (!chainSession) {
+        console.warn('Session not found on chain:', sessionId)
+        return null
+      }
+
+      // Get session from backend for additional metadata
+      let backendSession: SessionWithDetails | null = null
+      try {
+        const backendSessions = await this.getUserSessions()
+        backendSession = backendSessions.find((s) => s.id === sessionId) || null
+      } catch (error) {
+        console.warn('Failed to get backend session:', error)
+      }
+
+      // Merge blockchain truth with backend metadata
+      const syncedSession: SessionWithDetails = {
+        id: chainSession.sessionId,
+        expertId: chainSession.expert.toString(),
+        expertName: backendSession?.expertName || 'Unknown Expert',
+        expertSpecialization: backendSession?.expertSpecialization || 'Unknown',
+        shopperId: chainSession.shopper.toString(),
+        shopperName: backendSession?.shopperName || 'Unknown Shopper',
+        startTime: new Date(chainSession.startTime * 1000).toISOString(),
+        endTime: chainSession.endTime ? new Date(chainSession.endTime * 1000).toISOString() : undefined,
+        status: this.mapChainStatusToFrontend(chainSession.status),
+        amount: (chainSession.amount.toNumber() / 1_000_000_000).toString(), // Convert lamports to SOL
+        paymentStatus: chainSession.status === 'Completed' ? 'completed' : 'pending',
+        transactionHash: undefined, // Would need to track this separately
+        createdAt: new Date(chainSession.startTime * 1000).toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      return syncedSession
+    } catch (error) {
+      console.error('Failed to sync session with chain:', error)
+      return null
+    }
+  },
+
+  mapChainStatusToFrontend(chainStatus: any): 'pending' | 'active' | 'completed' | 'cancelled' {
+    if (typeof chainStatus === 'object') {
+      if (chainStatus.pending !== undefined) return 'pending'
+      if (chainStatus.active !== undefined) return 'active'
+      if (chainStatus.completed !== undefined) return 'completed'
+      if (chainStatus.cancelled !== undefined) return 'cancelled'
+    }
+
+    // Fallback to string comparison
+    const statusStr = chainStatus.toString().toLowerCase()
+    if (statusStr.includes('pending')) return 'pending'
+    if (statusStr.includes('active')) return 'active'
+    if (statusStr.includes('completed')) return 'completed'
+    if (statusStr.includes('cancelled')) return 'cancelled'
+
+    return 'pending' // Default fallback
+  },
+
+  // Hybrid method that tries blockchain first, falls back to backend
+  async getSessionHybrid(sessionId: string): Promise<SessionWithDetails | null> {
+    try {
+      // Try to get synced data from blockchain
+      const syncedSession = await this.syncSessionWithChain(sessionId)
+      if (syncedSession) {
+        return syncedSession
+      }
+
+      // Fallback to backend only
+      const backendSessions = await this.getUserSessions()
+      return backendSessions.find((s) => s.id === sessionId) || null
+    } catch (error) {
+      console.error('Failed to get session (hybrid):', error)
+      return null
+    }
+  },
+
+  // Video calling integration methods
+  async startVideoCall(sessionId: string, participantIds: string[]): Promise<VideoCallCredentials> {
+    try {
+      log.info('SessionService: Starting video call for session', { sessionId, participantIds })
+      
+      // Start the video call
+      const credentials = await videoCallService.startVideoCall({
+        sessionId,
+        participantIds,
+        callType: 'video'
+      })
+
+      // Update session with video call information
+      try {
+        await this.updateSession(sessionId, { 
+          status: 'active'
+        })
+      } catch (updateError) {
+        log.warn('Failed to update session status after starting video call:', updateError)
+      }
+
+      return credentials
+    } catch (error) {
+      log.error('Failed to start video call for session:', error)
+      throw new Error('Failed to start video call')
+    }
+  },
+
+  async joinVideoCall(sessionId: string, userId: string): Promise<VideoCallCredentials> {
+    try {
+      log.info('SessionService: Joining video call for session', { sessionId, userId })
+      
+      // Get session to retrieve call ID
+      const session = await this.getSessionHybrid(sessionId)
+      if (!session) {
+        throw new Error('Session not found')
+      }
+
+      if (!session.videoCallId) {
+        throw new Error('No video call active for this session')
+      }
+
+      return await videoCallService.joinVideoCall(session.videoCallId, userId)
+    } catch (error) {
+      log.error('Failed to join video call for session:', error)
+      throw new Error('Failed to join video call')
+    }
+  },
+
+  async endVideoCall(sessionId: string): Promise<void> {
+    try {
+      log.info('SessionService: Ending video call for session', { sessionId })
+      
+      // Get session to retrieve call ID
+      const session = await this.getSessionHybrid(sessionId)
+      if (!session?.videoCallId) {
+        log.warn('No video call ID found for session:', sessionId)
+        return
+      }
+
+      // End the video call
+      await videoCallService.endVideoCall(session.videoCallId)
+
+      // Complete the session
+      await this.completeSession(sessionId)
+    } catch (error) {
+      log.error('Failed to end video call for session:', error)
+      throw new Error('Failed to end video call')
+    }
+  },
+
+  async isVideoCallAvailable(): Promise<boolean> {
+    return videoCallService.isVideoCallAvailable()
+  },
+
+  async getVideoCallCredentials(sessionId: string, userId: string): Promise<VideoCallCredentials | null> {
+    try {
+      const session = await this.getSessionHybrid(sessionId)
+      if (!session) {
+        return null
+      }
+
+      // If session already has credentials cached, return them
+      if (session.videoCallCredentials) {
+        return session.videoCallCredentials
+      }
+
+      // If there's a call ID but no cached credentials, rejoin
+      if (session.videoCallId) {
+        return await this.joinVideoCall(sessionId, userId)
+      }
+
+      return null
+    } catch (error) {
+      log.error('Failed to get video call credentials:', error)
+      return null
+    }
+  },
+}

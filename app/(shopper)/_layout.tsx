@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack } from 'expo-router'
 
 export default function ShopperLayout() {
   return (
@@ -15,10 +15,7 @@ export default function ShopperLayout() {
         },
       }}
     >
-      <Stack.Screen
-        name="sessions"
-        options={{ title: 'My Sessions' }}
-      />
+      <Stack.Screen name="sessions" options={{ title: 'My Sessions' }} />
     </Stack>
-  );
+  )
 }

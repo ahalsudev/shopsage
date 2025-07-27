@@ -1,4 +1,4 @@
-package com.anonymous.shopsagemobile
+package com.ahalsudev.shopsagemobile
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
@@ -8,7 +8,6 @@ import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
-
 import expo.modules.ReactActivityDelegateWrapper
 
 class MainActivity : ReactActivity() {

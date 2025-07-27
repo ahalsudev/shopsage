@@ -4,7 +4,7 @@ import { clusterApiUrl } from '@solana/web3.js'
 
 export class AppConfig {
   static name = 'shopsage-mobile'
-  static uri = 'https://shopsage.tech'
+  static uri = 'https://shopsage.site'
   static clusters: Cluster[] = [
     {
       id: 'solana:devnet',

@@ -1,21 +1,15 @@
-import { useRouter } from 'expo-router';
-import React from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router'
+import React from 'react'
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import 'react-native-reanimated'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function WelcomeScreen() {
-  const router = useRouter();
+  const router = useRouter()
 
   const handleGetStarted = () => {
-    router.push('/connect-wallet');
-  };
+    router.push('/connect-wallet')
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -61,7 +55,7 @@ export default function WelcomeScreen() {
         <Text style={styles.footer}>Powered by Solana Blockchain</Text>
       </ScrollView>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -157,4 +151,4 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     textAlign: 'center',
   },
-});
+})

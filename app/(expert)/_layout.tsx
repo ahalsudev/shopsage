@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack } from 'expo-router'
 
 export default function ExpertLayout() {
   return (
@@ -15,14 +15,8 @@ export default function ExpertLayout() {
         },
       }}
     >
-      <Stack.Screen
-        name="list"
-        options={{ title: 'Find Experts' }}
-      />
-      <Stack.Screen
-        name="detail"
-        options={{ title: 'Expert Details' }}
-      />
+      <Stack.Screen name="list" options={{ title: 'Find Experts' }} />
+      <Stack.Screen name="detail" options={{ title: 'Expert Details' }} />
     </Stack>
-  );
+  )
 }

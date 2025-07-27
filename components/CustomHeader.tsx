@@ -1,18 +1,18 @@
-import { router } from 'expo-router';
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { router } from 'expo-router'
+import React from 'react'
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 interface CustomHeaderProps {
-  title: string;
-  canGoBack?: boolean;
+  title: string
+  canGoBack?: boolean
 }
 
 export function CustomHeader({ title, canGoBack = true }: CustomHeaderProps) {
   const handleGoBack = () => {
     if (router.canGoBack()) {
-      router.back();
+      router.back()
     }
-  };
+  }
 
   return (
     <View style={styles.header}>
@@ -24,7 +24,7 @@ export function CustomHeader({ title, canGoBack = true }: CustomHeaderProps) {
       <Text style={styles.title}>{title}</Text>
       <View style={styles.rightPlaceholder} />
     </View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -59,4 +59,4 @@ const styles = StyleSheet.create({
   rightPlaceholder: {
     width: 40,
   },
-});
+})

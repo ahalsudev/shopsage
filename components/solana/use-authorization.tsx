@@ -153,7 +153,7 @@ export function useAuthorization() {
         auth_token: fetchQuery.data?.authToken,
         sign_in_payload: signInPayload,
       })
-      console.log("reached here - authorizeSessionWithSignIn")
+      console.log('reached here - authorizeSessionWithSignIn')
       return (await handleAuthorizationResult(authorizationResult)).selectedAccount
     },
     [fetchQuery.data?.authToken, handleAuthorizationResult, selectedCluster.id],

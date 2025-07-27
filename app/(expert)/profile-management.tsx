@@ -1,13 +1,13 @@
-import { AppDispatch, RootState } from '@/store';
+import { AppDispatch, RootState } from '@/store'
 import {
   fetchCurrentUserProfile,
   toggleCurrentUserOnlineStatus,
   updateCurrentUserProfile,
-} from '@/store/thunks/expertThunks';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+} from '@/store/thunks/expertThunks'
+import { useNavigation } from '@react-navigation/native'
+import { StackNavigationProp } from '@react-navigation/stack'
+import { router } from 'expo-router'
+import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -19,51 +19,51 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootStackParamList } from '../_layout';
+} from 'react-native'
+import { useDispatch, useSelector } from 'react-redux'
+import { RootStackParamList } from '../_layout'
 
-type ExpertProfileManagementScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Profile'>;
+type ExpertProfileManagementScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Profile'>
 
 const ExpertProfileManagementScreen: React.FC = () => {
-  const navigation = useNavigation<ExpertProfileManagementScreenNavigationProp>();
-  const dispatch = useDispatch<AppDispatch>();
-  const { currentUserProfile, profileLoading, profileError } = useSelector((state: RootState) => state.experts);
+  const navigation = useNavigation<ExpertProfileManagementScreenNavigationProp>()
+  const dispatch = useDispatch<AppDispatch>()
+  const { currentUserProfile, profileLoading, profileError } = useSelector((state: RootState) => state.experts)
 
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false)
 
   // Form state
-  const [specialization, setSpecialization] = useState('');
-  const [bio, setBio] = useState('');
-  const [hourlyRate, setHourlyRate] = useState('');
-  const [profileImageUrl, setProfileImageUrl] = useState('');
-  const [isOnline, setIsOnline] = useState(false);
+  const [specialization, setSpecialization] = useState('')
+  const [bio, setBio] = useState('')
+  const [hourlyRate, setHourlyRate] = useState('')
+  const [profileImageUrl, setProfileImageUrl] = useState('')
+  const [isOnline, setIsOnline] = useState(false)
 
   useEffect(() => {
-    dispatch(fetchCurrentUserProfile());
-  }, [dispatch]);
+    dispatch(fetchCurrentUserProfile())
+  }, [dispatch])
 
   useEffect(() => {
     if (currentUserProfile) {
       // Initialize form state with current profile data
-      setSpecialization(currentUserProfile.specialization);
-      setBio(currentUserProfile.bio || '');
-      setHourlyRate(currentUserProfile.hourlyRate.toString());
-      setProfileImageUrl(currentUserProfile.profileImageUrl || '');
-      setIsOnline(currentUserProfile.isOnline);
+      setSpecialization(currentUserProfile.specialization)
+      setBio(currentUserProfile.bio || '')
+      setHourlyRate(currentUserProfile.hourlyRate.toString())
+      setProfileImageUrl(currentUserProfile.profileImageUrl || '')
+      setIsOnline(currentUserProfile.isOnline)
     }
-  }, [currentUserProfile]);
+  }, [currentUserProfile])
 
   const handleSaveProfile = async () => {
     if (!specialization.trim() || !hourlyRate.trim()) {
-      Alert.alert('Error', 'Please fill in specialization and hourly rate');
-      return;
+      Alert.alert('Error', 'Please fill in specialization and hourly rate')
+      return
     }
 
-    const rate = parseFloat(hourlyRate);
+    const rate = parseFloat(hourlyRate)
     if (isNaN(rate) || rate <= 0) {
-      Alert.alert('Error', 'Please enter a valid hourly rate');
-      return;
+      Alert.alert('Error', 'Please enter a valid hourly rate')
+      return
     }
 
     const profileData = {
@@ -72,51 +72,51 @@ const ExpertProfileManagementScreen: React.FC = () => {
       hourlyRate: rate,
       profileImageUrl: profileImageUrl.trim() || undefined,
       isOnline,
-    };
+    }
 
     try {
-      const result = await dispatch(updateCurrentUserProfile(profileData));
+      const result = await dispatch(updateCurrentUserProfile(profileData))
 
       if (updateCurrentUserProfile.fulfilled.match(result)) {
-        setIsEditing(false);
-        Alert.alert('Success', 'Profile updated successfully!');
+        setIsEditing(false)
+        Alert.alert('Success', 'Profile updated successfully!')
       } else {
-        Alert.alert('Error', result.payload as string || 'Failed to update profile');
+        Alert.alert('Error', (result.payload as string) || 'Failed to update profile')
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      console.error('Error updating profile:', error)
+      Alert.alert('Error', 'Failed to update profile. Please try again.')
     }
-  };
+  }
 
   const handleToggleOnlineStatus = async () => {
-    if (!currentUserProfile) return;
+    if (!currentUserProfile) return
 
     try {
-      const result = await dispatch(toggleCurrentUserOnlineStatus(!isOnline));
+      const result = await dispatch(toggleCurrentUserOnlineStatus(!isOnline))
 
       if (toggleCurrentUserOnlineStatus.fulfilled.match(result)) {
-        setIsOnline(result.payload.isOnline);
+        setIsOnline(result.payload.isOnline)
       } else {
-        Alert.alert('Error', result.payload as string || 'Failed to update online status');
+        Alert.alert('Error', (result.payload as string) || 'Failed to update online status')
       }
     } catch (error) {
-      console.error('Error updating online status:', error);
-      Alert.alert('Error', 'Failed to update online status. Please try again.');
+      console.error('Error updating online status:', error)
+      Alert.alert('Error', 'Failed to update online status. Please try again.')
     }
-  };
+  }
 
   const handleCancelEdit = () => {
     // Reset form state to original values
     if (currentUserProfile) {
-      setSpecialization(currentUserProfile.specialization);
-      setBio(currentUserProfile.bio || '');
-      setHourlyRate(currentUserProfile.hourlyRate.toString());
-      setProfileImageUrl(currentUserProfile.profileImageUrl || '');
-      setIsOnline(currentUserProfile.isOnline);
+      setSpecialization(currentUserProfile.specialization)
+      setBio(currentUserProfile.bio || '')
+      setHourlyRate(currentUserProfile.hourlyRate.toString())
+      setProfileImageUrl(currentUserProfile.profileImageUrl || '')
+      setIsOnline(currentUserProfile.isOnline)
     }
-    setIsEditing(false);
-  };
+    setIsEditing(false)
+  }
 
   if (profileLoading) {
     return (
@@ -126,7 +126,7 @@ const ExpertProfileManagementScreen: React.FC = () => {
           <Text style={styles.loadingText}>Loading profile...</Text>
         </View>
       </SafeAreaView>
-    );
+    )
   }
 
   if (!currentUserProfile && !profileLoading) {
@@ -135,24 +135,16 @@ const ExpertProfileManagementScreen: React.FC = () => {
         <View style={styles.errorContainer}>
           <Text style={styles.errorIcon}>👨‍💼</Text>
           <Text style={styles.errorTitle}>Create Your Expert Profile</Text>
-          <Text style={styles.errorText}>
-            You need to complete your expert profile to start helping shoppers.
-          </Text>
-          <TouchableOpacity 
-            style={styles.createProfileButton} 
-            onPress={() => router.push('/(expert)/registration')}
-          >
+          <Text style={styles.errorText}>You need to complete your expert profile to start helping shoppers.</Text>
+          <TouchableOpacity style={styles.createProfileButton} onPress={() => router.push('/(expert)/registration')}>
             <Text style={styles.createProfileButtonText}>Create Profile</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.retryButton} 
-            onPress={() => dispatch(fetchCurrentUserProfile())}
-          >
+          <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(fetchCurrentUserProfile())}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-    );
+    )
   }
 
   return (
@@ -162,13 +154,8 @@ const ExpertProfileManagementScreen: React.FC = () => {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Expert Profile</Text>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => setIsEditing(!isEditing)}
-            >
-              <Text style={styles.editButtonText}>
-                {isEditing ? 'Cancel' : 'Edit'}
-              </Text>
+            <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(!isEditing)}>
+              <Text style={styles.editButtonText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -257,10 +244,7 @@ const ExpertProfileManagementScreen: React.FC = () => {
 
               {/* Action Buttons */}
               <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={handleCancelEdit}
-                >
+                <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -268,9 +252,7 @@ const ExpertProfileManagementScreen: React.FC = () => {
                   onPress={handleSaveProfile}
                   disabled={profileLoading}
                 >
-                  <Text style={styles.saveButtonText}>
-                    {profileLoading ? 'Saving...' : 'Save Changes'}
-                  </Text>
+                  <Text style={styles.saveButtonText}>{profileLoading ? 'Saving...' : 'Save Changes'}</Text>
                 </TouchableOpacity>
               </View>
             </>
@@ -285,9 +267,7 @@ const ExpertProfileManagementScreen: React.FC = () => {
 
                 <View style={styles.profileField}>
                   <Text style={styles.fieldLabel}>Bio</Text>
-                  <Text style={styles.fieldValue}>
-                    {currentUserProfile.bio || 'No bio provided'}
-                  </Text>
+                  <Text style={styles.fieldValue}>{currentUserProfile.bio || 'No bio provided'}</Text>
                 </View>
 
                 <View style={styles.profileField}>
@@ -297,10 +277,7 @@ const ExpertProfileManagementScreen: React.FC = () => {
 
                 <View style={styles.profileField}>
                   <Text style={styles.fieldLabel}>Status</Text>
-                  <Text style={[
-                    styles.fieldValue,
-                    { color: currentUserProfile.isOnline ? '#10b981' : '#ef4444' }
-                  ]}>
+                  <Text style={[styles.fieldValue, { color: currentUserProfile.isOnline ? '#10b981' : '#ef4444' }]}>
                     {currentUserProfile.isOnline ? 'Online' : 'Offline'}
                   </Text>
                 </View>
@@ -310,8 +287,8 @@ const ExpertProfileManagementScreen: React.FC = () => {
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -530,6 +507,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1e293b',
   },
-});
+})
 
-export default ExpertProfileManagementScreen;
+export default ExpertProfileManagementScreen

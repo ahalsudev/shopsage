@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import React from 'react'
+import { View, ActivityIndicator, Text, StyleSheet } from 'react-native'
 
 interface LoadingSpinnerProps {
-  size?: 'small' | 'large';
-  color?: string;
-  message?: string;
-  overlay?: boolean;
+  size?: 'small' | 'large'
+  color?: string
+  message?: string
+  overlay?: boolean
 }
 
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
@@ -14,25 +14,23 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   message,
   overlay = false,
 }) => {
-  const containerStyle = overlay ? [styles.container, styles.overlay] : styles.container;
+  const containerStyle = overlay ? [styles.container, styles.overlay] : styles.container
 
   return (
     <View style={containerStyle}>
       <View style={styles.spinnerContainer}>
         <ActivityIndicator size={size} color={color} />
-        {message && (
-          <Text style={[styles.message, { color }]}>{message}</Text>
-        )}
+        {message && <Text style={[styles.message, { color }]}>{message}</Text>}
       </View>
     </View>
-  );
-};
+  )
+}
 
 interface LoadingStateProps {
-  isLoading: boolean;
-  message?: string;
-  children: React.ReactNode;
-  overlay?: boolean;
+  isLoading: boolean
+  message?: string
+  children: React.ReactNode
+  overlay?: boolean
 }
 
 export const LoadingState: React.FC<LoadingStateProps> = ({
@@ -42,16 +40,11 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   overlay = false,
 }) => {
   if (isLoading) {
-    return (
-      <LoadingSpinner 
-        message={message} 
-        overlay={overlay}
-      />
-    );
+    return <LoadingSpinner message={message} overlay={overlay} />
   }
 
-  return <>{children}</>;
-};
+  return <>{children}</>
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -86,6 +79,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-});
+})
 
-export default LoadingSpinner;
+export default LoadingSpinner

@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack } from 'expo-router'
 
 export default function CallLayout() {
   return (
@@ -15,10 +15,7 @@ export default function CallLayout() {
         },
       }}
     >
-      <Stack.Screen
-        name="video-call"
-        options={{ title: 'Video Call' }}
-      />
+      <Stack.Screen name="video-call" options={{ title: 'Video Call' }} />
     </Stack>
-  );
+  )
 }

@@ -7,24 +7,30 @@ import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { View } from 'react-native'
 import 'react-native-reanimated'
+import { initializeApp } from '../utils/appInitializer'
 
 export type RootStackParamList = {
-  Welcome: undefined;
-  ConnectWallet: undefined;
-  ExpertRegistration: undefined;
-  Home: undefined;
-  ExpertList: undefined;
-  ExpertDetail: { expertId: string };
-  VideoCall: { sessionId: string; expertId: string };
-  Profile: undefined;
-};
+  Welcome: undefined
+  ConnectWallet: undefined
+  ExpertRegistration: undefined
+  Home: undefined
+  ExpertList: undefined
+  ExpertDetail: { expertId: string }
+  VideoCall: { sessionId: string; expertId: string }
+  Profile: undefined
+}
 
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
+  // Initialize app configuration
+  useEffect(() => {
+    initializeApp().catch(console.error)
+  }, [])
+
   // Use this hook to track the locations for analytics or debugging.
   // Delete if you don't need it.
   useTrackLocations((pathname, params) => {
@@ -35,9 +41,7 @@ export default function RootLayout() {
   })
 
   const onLayoutRootView = useCallback(async () => {
-    console.log('onLayoutRootView')
     if (loaded) {
-      console.log('loaded')
       // This tells the splash screen to hide immediately! If we call this after
       // `setAppIsReady`, then we may see a blank screen while the app is
       // loading its initial state and rendering its first pixels. So instead,
@@ -65,21 +69,23 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isRegistered } = useAuth()
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={isAuthenticated}>
+      <Stack.Protected guard={isAuthenticated && isRegistered}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(profile)" options={{ headerShown: false }} />
         <Stack.Screen name="(expert)" options={{ headerShown: false }} />
         <Stack.Screen name="(shopper)" options={{ headerShown: false }} />
         <Stack.Screen name="(call)" options={{ headerShown: false }} />
-        {/* <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> */}
-        <Stack.Screen name="+not-found" />
       </Stack.Protected>
-      <Stack.Protected guard={!isAuthenticated}>
+      <Stack.Protected guard={!isAuthenticated && !isRegistered}>
         <Stack.Screen name="welcome" />
         <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+      <Stack.Protected guard={isAuthenticated && !isRegistered}>
+        <Stack.Screen name="complete-profile" />
       </Stack.Protected>
     </Stack>
   )

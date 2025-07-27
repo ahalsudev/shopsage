@@ -15,6 +15,13 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.ahalsudev.shopsagemobile",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "ACCESS_NETWORK_STATE",
+        "INTERNET"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",
@@ -22,7 +29,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "shopsage.tech"
+              "host": "shopsage.site"
             },
             {
               "scheme": "shopsage"
@@ -36,7 +43,7 @@
       ],
       "queries": [
         "phantom",
-        "phantom-deeplink", 
+        "phantom-deeplink",
         "phantom-wallet",
         "solana-wallet"
       ]
@@ -70,6 +77,9 @@
     "extra": {
       "router": {},
       "eas": {}
+    },
+    "ios": {
+      "bundleIdentifier": "com.ahalsudev.shopsagemobile"
     }
   }
 }

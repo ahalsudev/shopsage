@@ -1,41 +1,41 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { Component, ErrorInfo, ReactNode } from 'react'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 
 interface Props {
-  children: ReactNode;
-  fallback?: (error: Error, retry: () => void) => ReactNode;
+  children: ReactNode
+  fallback?: (error: Error, retry: () => void) => ReactNode
 }
 
 interface State {
-  hasError: boolean;
-  error: Error | null;
+  hasError: boolean
+  error: Error | null
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null };
+    super(props)
+    this.state = { hasError: false, error: null }
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-    
+    console.error('ErrorBoundary caught an error:', error, errorInfo)
+
     // You could send this to a logging service
     // logErrorToService(error, errorInfo);
   }
 
   retry = () => {
-    this.setState({ hasError: false, error: null });
-  };
+    this.setState({ hasError: false, error: null })
+  }
 
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        return this.props.fallback(this.state.error!, this.retry);
+        return this.props.fallback(this.state.error!, this.retry)
       }
 
       return (
@@ -43,18 +43,16 @@ export class ErrorBoundary extends Component<Props, State> {
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
             <Text style={styles.errorTitle}>Something went wrong</Text>
-            <Text style={styles.errorMessage}>
-              {this.state.error?.message || 'An unexpected error occurred'}
-            </Text>
+            <Text style={styles.errorMessage}>{this.state.error?.message || 'An unexpected error occurred'}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={this.retry}>
               <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
         </View>
-      );
+      )
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }
 
@@ -107,6 +105,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-});
+})
 
-export default ErrorBoundary;
+export default ErrorBoundary

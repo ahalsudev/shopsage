@@ -1,7 +1,7 @@
-import { RootState } from '@/store';
-import { fetchExpertsFailure, fetchExpertsStart, fetchExpertsSuccess } from '@/store/slices/expertSlice';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { RootState } from '@/store'
+import { fetchExpertsFailure, fetchExpertsStart, fetchExpertsSuccess } from '@/store/slices/expertSlice'
+import { useRouter } from 'expo-router'
+import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -11,26 +11,26 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useDispatch, useSelector } from 'react-redux';
+} from 'react-native'
+import { useDispatch, useSelector } from 'react-redux'
 
 const ExpertListScreen: React.FC = () => {
-  const dispatch = useDispatch();
-  const { experts, isLoading, error } = useSelector((state: RootState) => state.experts);
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filteredExperts, setFilteredExperts] = useState(experts);
+  const dispatch = useDispatch()
+  const { experts, isLoading, error } = useSelector((state: RootState) => state.experts)
+  const router = useRouter()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filteredExperts, setFilteredExperts] = useState(experts)
 
   useEffect(() => {
-    loadExperts();
-  }, []);
+    loadExperts()
+  }, [])
 
   useEffect(() => {
-    filterExperts();
-  }, [searchQuery, experts]);
+    filterExperts()
+  }, [searchQuery, experts])
 
   const loadExperts = async () => {
-    dispatch(fetchExpertsStart());
+    dispatch(fetchExpertsStart())
     try {
       // Mock data for now - replace with actual API call
       const mockExperts = [
@@ -70,37 +70,38 @@ const ExpertListScreen: React.FC = () => {
           isVerified: true,
           isOnline: true,
         },
-      ];
-      dispatch(fetchExpertsSuccess(mockExperts));
+      ]
+      dispatch(fetchExpertsSuccess(mockExperts))
     } catch {
-      dispatch(fetchExpertsFailure('Failed to load experts'));
+      dispatch(fetchExpertsFailure('Failed to load experts'))
     }
-  };
+  }
 
   const filterExperts = () => {
-    const filtered = experts.filter(expert =>
-      expert.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      expert.specialization.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredExperts(filtered);
-  };
+    const filtered = experts.filter(
+      (expert) =>
+        expert.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        expert.specialization.toLowerCase().includes(searchQuery.toLowerCase()),
+    )
+    setFilteredExperts(filtered)
+  }
 
   interface Expert {
-    id: string;
-    userId: string;
-    name: string;
-    specialization: string;
-    bio: string;
-    hourlyRate: number;
-    rating: number;
-    totalConsultations: number;
-    isVerified: boolean;
-    isOnline: boolean;
+    id: string
+    userId: string
+    name: string
+    specialization: string
+    bio: string
+    hourlyRate: number
+    rating: number
+    totalConsultations: number
+    isVerified: boolean
+    isOnline: boolean
   }
 
   const handleExpertPress = (expert: Expert) => {
     router.push(`/(expert)/detail?expertId=${expert.id}`)
-  };
+  }
 
   const renderExpertCard = ({ item }: { item: Expert }) => (
     <TouchableOpacity style={styles.expertCard} onPress={() => handleExpertPress(item)}>
@@ -130,7 +131,7 @@ const ExpertListScreen: React.FC = () => {
         </View>
       </View>
     </TouchableOpacity>
-  );
+  )
 
   if (isLoading) {
     return (
@@ -140,7 +141,7 @@ const ExpertListScreen: React.FC = () => {
           <Text style={styles.loadingText}>Loading experts...</Text>
         </View>
       </SafeAreaView>
-    );
+    )
   }
 
   return (
@@ -171,8 +172,8 @@ const ExpertListScreen: React.FC = () => {
         </View>
       )}
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -306,6 +307,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
-});
+})
 
-export default ExpertListScreen; 
+export default ExpertListScreen

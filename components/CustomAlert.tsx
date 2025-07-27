@@ -1,46 +1,35 @@
-import React from 'react';
-import {
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import React from 'react'
+import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 
 interface AlertButton {
-  text: string;
-  onPress?: () => void;
-  style?: 'default' | 'cancel' | 'destructive';
+  text: string
+  onPress?: () => void
+  style?: 'default' | 'cancel' | 'destructive'
 }
 
 interface CustomAlertProps {
-  visible: boolean;
-  title: string;
-  message?: string;
-  buttons: AlertButton[];
-  onClose: () => void;
+  visible: boolean
+  title: string
+  message?: string
+  buttons: AlertButton[]
+  onClose: () => void
 }
 
 export function CustomAlert({ visible, title, message, buttons, onClose }: CustomAlertProps) {
   const handleButtonPress = (onPress?: () => void) => {
-    onPress?.();
-    onClose();
-  };
+    onPress?.()
+    onClose()
+  }
 
   return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.alertContainer}>
           <View style={styles.alertContent}>
             <Text style={styles.title}>{title}</Text>
             {message && <Text style={styles.message}>{message}</Text>}
           </View>
-          
+
           <View style={styles.buttonContainer}>
             {buttons.map((button, index) => (
               <TouchableOpacity
@@ -70,22 +59,22 @@ export function CustomAlert({ visible, title, message, buttons, onClose }: Custo
         </View>
       </View>
     </Modal>
-  );
+  )
 }
 
 // Hook for easier usage
 export function useCustomAlert() {
   const [alertConfig, setAlertConfig] = React.useState<{
-    visible: boolean;
-    title: string;
-    message?: string;
-    buttons: AlertButton[];
+    visible: boolean
+    title: string
+    message?: string
+    buttons: AlertButton[]
   }>({
     visible: false,
     title: '',
     message: undefined,
     buttons: [],
-  });
+  })
 
   const showAlert = (title: string, message?: string, buttons: AlertButton[] = [{ text: 'OK' }]) => {
     setAlertConfig({
@@ -93,12 +82,12 @@ export function useCustomAlert() {
       title,
       message,
       buttons,
-    });
-  };
+    })
+  }
 
   const hideAlert = () => {
-    setAlertConfig(prev => ({ ...prev, visible: false }));
-  };
+    setAlertConfig((prev) => ({ ...prev, visible: false }))
+  }
 
   const AlertComponent = (
     <CustomAlert
@@ -108,9 +97,9 @@ export function useCustomAlert() {
       buttons={alertConfig.buttons}
       onClose={hideAlert}
     />
-  );
+  )
 
-  return { showAlert, AlertComponent };
+  return { showAlert, AlertComponent }
 }
 
 const styles = StyleSheet.create({
@@ -194,4 +183,4 @@ const styles = StyleSheet.create({
   destructiveButtonText: {
     color: '#ef4444',
   },
-});
+})
