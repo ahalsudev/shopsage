@@ -1,11 +1,11 @@
-import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js'
-import { Program, AnchorProvider, BN, web3 } from '@coral-xyz/anchor'
+import { AnchorProvider, BN, Program, web3 } from '@coral-xyz/anchor'
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
+import { Connection, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 
-import { PROGRAM_IDS, PLATFORM_CONFIG, PDA_SEEDS } from '../constants/programs'
+import { PDA_SEEDS, PLATFORM_CONFIG, PROGRAM_IDS } from '../constants/programs'
+import { IDL as ExpertIDL, ShopsageExpert } from '../types/programs/shopsage-expert'
 import { IDL as PaymentIDL, ShopsagePayment } from '../types/programs/shopsage-payment'
 import { IDL as SessionIDL, ShopsageSession } from '../types/programs/shopsage-session'
-import { IDL as ExpertIDL, ShopsageExpert } from '../types/programs/shopsage-expert'
 
 export class SolanaUtils {
   private connection: Connection
@@ -193,7 +193,7 @@ export class SolanaUtils {
     authority: PublicKey,
     name: string,
     specialization: string,
-    hourlyRate: number,
+    sessionRate: number,
   ): Promise<Transaction> {
     if (!this.expertProgram) {
       throw new Error('Expert program not initialized')
@@ -202,7 +202,7 @@ export class SolanaUtils {
     const [expertAccount] = SolanaUtils.findExpertAccount(authority)
 
     const tx = await this.expertProgram.methods
-      .registerExpert(name, specialization, new BN(hourlyRate))
+      .registerExpert(name, specialization, new BN(sessionRate))
       .accounts({
         expert: expertAccount,
         authority,

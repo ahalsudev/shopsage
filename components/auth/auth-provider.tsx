@@ -5,20 +5,18 @@ import { useMutation } from '@tanstack/react-query'
 import { createContext, type PropsWithChildren, use, useCallback, useEffect, useMemo, useState } from 'react'
 import { log } from '../../config/environment'
 import { userService } from '../../services/userService'
-import { CompleteUserProfile, User } from '../../types/auth'
+import { UserCompleteProfile } from '../../types/auth'
 
 export interface AuthState {
   isAuthenticated: boolean
   isRegistered: boolean
   isLoading: boolean
-  user: User | null
-  completeProfile: CompleteUserProfile | null
+  user: UserCompleteProfile | null
   signIn: () => Promise<Account>
   signOut: () => Promise<void>
-  updateUser: (updates: Partial<User>) => Promise<void>
+  updateUser: (updates: Partial<UserCompleteProfile>) => Promise<void>
   enableRole: (role: 'shopper' | 'expert', profileData: any) => Promise<void>
   syncUserData: () => Promise<void>
-  refreshCompleteProfile: () => Promise<void>
 }
 
 const Context = createContext<AuthState>({} as AuthState)
@@ -64,14 +62,15 @@ function useSignInMutation(onSignInSuccess?: (walletAddress: string) => void) {
 export function AuthProvider({ children }: PropsWithChildren) {
   const { disconnect } = useMobileWallet()
   const { accounts, isLoading } = useAuthorization()
-  const [regularUser, setRegularUser] = useState<User | null>(null)
-  const [completeProfile, setCompleteProfile] = useState<CompleteUserProfile | null>(null)
+  const [profile, setProfile] = useState<UserCompleteProfile | null>(null)
   const [authLoading, setAuthLoading] = useState(false)
+  const [hasValidToken, setHasValidToken] = useState(false)
 
   // Initialize user on first sign in
   const onSignInSuccess = useCallback(async (walletAddress: string) => {
     setAuthLoading(true)
     await userService.saveWalletAddressLocally(walletAddress)
+    setAuthLoading(false)
   }, [])
 
   const signInMutation = useSignInMutation(onSignInSuccess)
@@ -79,52 +78,65 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     const loadUserData = async () => {
       try {
+        // Check if we have a valid auth token
+        const AsyncStorage = await import('@react-native-async-storage/async-storage').then((m) => m.default)
+        const token = await AsyncStorage.getItem('token')
+        
+        if (!token) {
+          console.log('No auth token found, user needs to log in')
+          setProfile(null)
+          setHasValidToken(false)
+          return
+        }
+        
         const userData = await userService.loadUserDataLocally()
         if (userData) {
-          setRegularUser(userData)
+          console.log('Loaded user data with valid token')
+          setProfile(userData)
+          setHasValidToken(true)
+        } else {
+          console.log('No user data found despite having token')
+          // Token exists but no user data - clear token
+          await AsyncStorage.removeItem('token')
+          setProfile(null)
+          setHasValidToken(false)
         }
       } catch (error) {
         console.error('Error loading user data:', error)
+        // Clear potentially corrupted data
+        const AsyncStorage = await import('@react-native-async-storage/async-storage').then((m) => m.default)
+        await AsyncStorage.removeItem('token')
+        setProfile(null)
+        setHasValidToken(false)
       }
     }
 
     loadUserData()
   }, [])
 
-  const user: User | null = useMemo(() => {
+  const user: UserCompleteProfile | null = useMemo(() => {
     if (!accounts || accounts.length === 0) return null
 
     const walletAddress = accounts[0].publicKey.toString()
 
-    if (regularUser && regularUser.profile?.walletAddress === walletAddress) {
-      return regularUser
+    if (profile && profile.user.walletAddress === walletAddress) {
+      return profile
     }
     return null
-  }, [accounts, regularUser])
+  }, [accounts, profile])
 
-  const updateUser = async (updates: Partial<User>) => {
+  const updateUser = async (updates: Partial<UserCompleteProfile>) => {
     try {
-      // If we have a complete profile (like from registration), use it directly
-      if (updates.profile && updates.profile.id) {
-        const updatedUser: User = {
-          profile: updates.profile,
-          shopperProfile: updates.shopperProfile || regularUser?.shopperProfile,
-          expertProfile: updates.expertProfile || regularUser?.expertProfile,
-        }
-
-        setRegularUser(updatedUser)
+      if (updates.user) {
+        const updatedUser: UserCompleteProfile = {
+          user: updates.user,
+          shopperProfile: updates.shopperProfile,
+          expertProfile: updates.expertProfile
+        };
+        setProfile(updatedUser)
         await userService.saveUserDataLocally(updatedUser)
-      }
-      // Otherwise, update via backend
-      else if (updates.profile?.name || updates.profile?.email) {
-        const updatedProfile = await userService.updateUserProfile({
-          name: updates.profile?.name,
-          email: updates.profile?.email,
-        })
-        const updatedUser = { ...regularUser, profile: updatedProfile }
-
-        setRegularUser(updatedUser)
-        await userService.saveUserDataLocally(updatedUser)
+      } else {
+        console.log("User data not saved locally");
       }
     } catch (error) {
       console.log('Error updating user data:', error)
@@ -144,7 +156,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             ...user,
             shopperProfile,
           }
-          setRegularUser(updatedUser)
+          setProfile(updatedUser)
           await userService.saveUserDataLocally(updatedUser)
         }
       } else {
@@ -154,7 +166,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
             ...user,
             expertProfile,
           }
-          setRegularUser(updatedUser)
+          setProfile(updatedUser)
           await userService.saveUserDataLocally(updatedUser)
         }
       }
@@ -173,35 +185,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
       const syncedUser = await userService.syncUserData()
       if (syncedUser) {
-        setRegularUser(syncedUser)
+        setProfile(syncedUser)
       }
     } catch (error) {
       log.error('Failed to sync user data:', error)
-    } finally {
-      setAuthLoading(false)
-    }
-  }
-
-  const refreshCompleteProfile = async () => {
-    try {
-      setAuthLoading(true)
-      log.info('Refreshing complete profile')
-
-      const profile = await userService.getCompleteUserProfile()
-      if (profile) {
-        setCompleteProfile(profile)
-        
-        // Also update legacy user format for backward compatibility
-        const legacyUser: User = {
-          profile: profile.user,
-          roles: profile.roles,
-          shopperProfile: profile.shopperProfile,
-          expertProfile: profile.expertProfile,
-        }
-        setRegularUser(legacyUser)
-      }
-    } catch (error) {
-      log.error('Failed to refresh complete profile:', error)
     } finally {
       setAuthLoading(false)
     }
@@ -212,8 +199,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       log.info('Starting sign out process')
 
       // Clear local state immediately
-      setRegularUser(null)
-      setCompleteProfile(null)
+      setProfile(null)
 
       // Clear local storage
       try {
@@ -245,8 +231,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } catch (error) {
       log.error('Failed to sign out:', error)
       // Clear local state even if there are errors
-      setRegularUser(null)
-      setCompleteProfile(null)
+      setProfile(null)
       throw error
     }
   }
@@ -260,14 +245,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
       updateUser,
       enableRole,
       syncUserData,
-      refreshCompleteProfile,
-      isAuthenticated: (accounts?.length ?? 0) > 0,
-      isRegistered: regularUser !== null,
+      isAuthenticated: (accounts?.length ?? 0) > 0 && hasValidToken,
+      isRegistered: profile !== null,
       isLoading: signInMutation.isPending || isLoading || authLoading,
       user,
-      completeProfile,
     }),
-    [accounts, signInMutation, isLoading, user, completeProfile, authLoading, signOut, updateUser, enableRole, syncUserData, refreshCompleteProfile],
+    [
+      accounts,
+      signInMutation,
+      isLoading,
+      user,
+      authLoading,
+      signOut,
+      updateUser,
+      enableRole,
+      syncUserData,
+      hasValidToken
+    ],
   )
 
   return <Context value={value}>{children}</Context>

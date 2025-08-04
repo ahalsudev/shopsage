@@ -1,7 +1,6 @@
 import { AppProviders } from '@/components/app-providers'
 import { AppSplashController } from '@/components/app-splash-controller'
 import { useAuth } from '@/components/auth/auth-provider'
-import { useTrackLocations } from '@/hooks/use-track-locations'
 import { PortalHost } from '@rn-primitives/portal'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
@@ -10,6 +9,7 @@ import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect } from 'react'
 import { View } from 'react-native'
 import 'react-native-reanimated'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { initializeApp } from '../utils/appInitializer'
 
 export type RootStackParamList = {
@@ -31,11 +31,6 @@ export default function RootLayout() {
     initializeApp().catch(console.error)
   }, [])
 
-  // Use this hook to track the locations for analytics or debugging.
-  // Delete if you don't need it.
-  useTrackLocations((pathname, params) => {
-    console.log(`Track ${pathname}`, { params })
-  })
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   })
@@ -57,14 +52,14 @@ export default function RootLayout() {
   }
 
   return (
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <AppProviders>
         <AppSplashController />
         <RootNavigator />
         <StatusBar style="auto" />
       </AppProviders>
       <PortalHost />
-    </View>
+    </GestureHandlerRootView>
   )
 }
 
@@ -75,7 +70,7 @@ function RootNavigator() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={isAuthenticated && isRegistered}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(profile)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(expert)" options={{ headerShown: false }} />
         <Stack.Screen name="(shopper)" options={{ headerShown: false }} />
         <Stack.Screen name="(call)" options={{ headerShown: false }} />

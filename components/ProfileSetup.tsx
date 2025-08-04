@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Switch } from 'react-native'
 import { useAuth } from '@/components/auth/auth-provider'
+import React, { useState } from 'react'
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 
 interface ProfileSetupProps {
   role: 'shopper' | 'expert'
@@ -20,7 +20,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete, on
   // Expert profile state
   const [specialization, setSpecialization] = useState('')
   const [bio, setBio] = useState('')
-  const [hourlyRate, setHourlyRate] = useState('')
+  const [sessionRate, setsessionRate] = useState('')
   const [timezone, setTimezone] = useState('UTC')
 
   // Common categories for shoppers
@@ -78,12 +78,12 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete, on
 
         await enableRole('shopper', profileData)
       } else {
-        if (!specialization || !bio || !hourlyRate) {
+        if (!specialization || !bio || !sessionRate) {
           Alert.alert('Error', 'Please fill in all required fields')
           return
         }
 
-        const rate = parseFloat(hourlyRate)
+        const rate = parseFloat(sessionRate)
         if (isNaN(rate) || rate <= 0) {
           Alert.alert('Error', 'Please enter a valid hourly rate')
           return
@@ -92,7 +92,7 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete, on
         const profileData = {
           specialization,
           bio,
-          hourlyRate: rate,
+          sessionRate: rate,
           availability: {
             schedule: {
               monday: { start: '09:00', end: '17:00', available: true },
@@ -224,8 +224,8 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ role, onComplete, on
             <Text style={styles.sectionTitle}>Hourly Rate (SOL) *</Text>
             <TextInput
               style={styles.input}
-              value={hourlyRate}
-              onChangeText={setHourlyRate}
+              value={sessionRate}
+              onChangeText={setsessionRate}
               placeholder="0.01"
               keyboardType="decimal-pad"
             />

@@ -1,13 +1,13 @@
-import { PublicKey } from '@solana/web3.js'
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
-import { solanaUtils } from '../utils/solana'
+import { PublicKey } from '@solana/web3.js'
 import { PLATFORM_CONFIG } from '../constants/programs'
+import { solanaUtils } from '../utils/solana'
 import { paymentService } from './paymentService'
 
 export interface ExpertRegistrationData {
   name: string
   specialization: string
-  hourlyRate: number // in SOL
+  sessionRate: number // in SOL
   bio?: string
   profileImageUrl?: string
 }
@@ -16,7 +16,7 @@ export interface ChainExpertData {
   authority: PublicKey
   name: string
   specialization: string
-  hourlyRate: number // in lamports
+  sessionRate: number // in lamports
   rating: number
   totalConsultations: number
   isVerified: boolean
@@ -47,7 +47,7 @@ export const expertProgramService = {
           authority,
           expertData.name,
           expertData.specialization,
-          solanaUtils.solToLamports(expertData.hourlyRate),
+          solanaUtils.solToLamports(expertData.sessionRate),
         )
 
         return await solanaUtils.executeTransaction(transaction, 'Register Expert')
@@ -113,7 +113,7 @@ export const expertProgramService = {
         name: chainExpert.name,
         specialization: chainExpert.specialization,
         bio: null, // Chain doesn't store bio, backend does
-        hourlyRate: chainExpert.hourlyRate / 1_000_000_000, // Convert lamports to SOL
+        sessionRate: chainExpert.sessionRate / 1_000_000_000, // Convert lamports to SOL
         rating: chainExpert.rating,
         totalConsultations: chainExpert.totalConsultations,
         isVerified: chainExpert.isVerified,
@@ -145,7 +145,7 @@ export const expertProgramService = {
         backendExpert = await expertService.createProfile({
           specialization: expertData.specialization,
           bio: expertData.bio,
-          hourlyRate: expertData.hourlyRate,
+          sessionRate: expertData.sessionRate,
           profileImageUrl: expertData.profileImageUrl,
         })
       } catch (backendError) {
@@ -202,7 +202,7 @@ export const expertProgramService = {
           bio: backendExpert?.bio || chainExpert.bio,
           profileImageUrl: backendExpert?.profileImageUrl || chainExpert.profileImageUrl,
           // Chain data takes precedence for critical fields
-          hourlyRate: chainExpert.hourlyRate,
+          sessionRate: chainExpert.sessionRate,
           rating: chainExpert.rating,
           totalConsultations: chainExpert.totalConsultations,
           isVerified: chainExpert.isVerified,

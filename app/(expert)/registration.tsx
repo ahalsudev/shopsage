@@ -1,5 +1,6 @@
 import { AppDispatch, RootState } from '@/store'
 import { createCurrentUserProfile } from '@/store/thunks/expertThunks'
+import { GradientHeader } from '@/components/common/GradientHeader'
 import { useNavigation } from '@react-navigation/native'
 import { StackNavigationProp } from '@react-navigation/stack'
 import { router } from 'expo-router'
@@ -17,25 +18,25 @@ const ExpertRegistrationScreen: React.FC = () => {
 
   const [specialization, setSpecialization] = useState('')
   const [bio, setBio] = useState('')
-  const [hourlyRate, setHourlyRate] = useState('')
+  const [sessionRate, setSessionRate] = useState('')
   const [profileImageUrl, setProfileImageUrl] = useState('')
 
   const handleCreateProfile = async () => {
-    if (!specialization.trim() || !hourlyRate.trim()) {
-      Alert.alert('Error', 'Please fill in specialization and hourly rate')
+    if (!specialization.trim() || !sessionRate.trim()) {
+      Alert.alert('Error', 'Please fill in specialization and session rate')
       return
     }
 
-    const rate = parseFloat(hourlyRate)
+    const rate = parseFloat(sessionRate)
     if (isNaN(rate) || rate <= 0) {
-      Alert.alert('Error', 'Please enter a valid hourly rate')
+      Alert.alert('Error', 'Please enter a valid session rate')
       return
     }
 
     const profileData = {
       specialization: specialization.trim(),
       bio: bio.trim() || undefined,
-      hourlyRate: rate,
+      sessionRate: rate,
       profileImageUrl: profileImageUrl.trim() || undefined,
     }
 
@@ -59,11 +60,14 @@ const ExpertRegistrationScreen: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          <Text style={styles.title}>Complete Your Expert Profile</Text>
-          <Text style={styles.subtitle}>Tell us about your expertise to start helping shoppers</Text>
+    <View style={styles.container}>
+      <GradientHeader 
+        title="Expert Registration"
+        subtitle="Complete your profile to start helping shoppers"
+      />
+      <SafeAreaView style={styles.contentContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.content}>
 
           {/* Specialization Input */}
           <View style={styles.inputContainer}>
@@ -91,18 +95,18 @@ const ExpertRegistrationScreen: React.FC = () => {
             />
           </View>
 
-          {/* Hourly Rate Input */}
+          {/* Session Rate Input */}
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Hourly Rate (SOL) *</Text>
+            <Text style={styles.label}>Session Rate (SOL) *</Text>
             <TextInput
               style={styles.input}
-              value={hourlyRate}
-              onChangeText={setHourlyRate}
+              value={sessionRate}
+              onChangeText={setSessionRate}
               placeholder="0.05"
               placeholderTextColor="#9ca3af"
               keyboardType="decimal-pad"
             />
-            <Text style={styles.helpText}>Note: You'll receive 80% of the consultation fee</Text>
+            <Text style={styles.helpText}>Rate per 5-minute consultation session</Text>
           </View>
 
           {/* Profile Image URL Input */}
@@ -136,14 +140,19 @@ const ExpertRegistrationScreen: React.FC = () => {
               💡 Your profile will be reviewed before going live. You'll be notified once it's approved.
             </Text>
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#fefefe',
+  },
+  contentContainer: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },
@@ -154,19 +163,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     justifyContent: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 40,
   },
   inputContainer: {
     marginBottom: 20,

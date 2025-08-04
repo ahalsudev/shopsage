@@ -1,104 +1,95 @@
-import { useAuth } from '@/components/auth/auth-provider';
-import { dataProvider } from '@/services/dataProvider';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import {
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { useAuth } from '@/components/auth/auth-provider'
+import { GradientHeader } from '@/components/common/GradientHeader'
+import { dataProvider } from '@/services/dataProvider'
+import { useRouter } from 'expo-router'
+import React, { useState } from 'react'
+import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 
 const specializations = [
-  'Tech Support', 'Fashion Consulting', 'Home Improvement', 'Fitness Coaching',
-  'Financial Advice', 'Career Counseling', 'Product Research', 'DIY Projects',
-  'Cooking & Nutrition', 'Travel Planning', 'Photography Tips', 'Music Lessons'
-];
+  'Tech Support',
+  'Fashion Consulting',
+  'Home Improvement',
+  'Fitness Coaching',
+  'Financial Advice',
+  'Career Counseling',
+  'Product Research',
+  'DIY Projects',
+  'Cooking & Nutrition',
+  'Travel Planning',
+  'Photography Tips',
+  'Music Lessons',
+]
 
 export default function ExpertOnboarding() {
-  const { refreshCompleteProfile, isLoading } = useAuth();
-  const router = useRouter();
-  const [selectedSpecialization, setSelectedSpecialization] = useState('');
-  const [bio, setBio] = useState('');
-  const [hourlyRate, setHourlyRate] = useState('0.10');
+  const { syncUserData, isLoading } = useAuth()
+  const router = useRouter()
+  const [selectedSpecialization, setSelectedSpecialization] = useState('')
+  const [bio, setBio] = useState('')
+  const [sessionRate, setSessionRate] = useState('0.10')
 
   const handleComplete = async () => {
     if (!selectedSpecialization) {
-      Alert.alert('Specialization Required', 'Please select your area of expertise.');
-      return;
+      Alert.alert('Specialization Required', 'Please select your area of expertise.')
+      return
     }
 
     if (!bio.trim()) {
-      Alert.alert('Bio Required', 'Please write a brief bio about your expertise.');
-      return;
+      Alert.alert('Bio Required', 'Please write a brief bio about your expertise.')
+      return
     }
 
-    if (!hourlyRate || parseFloat(hourlyRate) <= 0) {
-      Alert.alert('Rate Required', 'Please set a valid hourly rate.');
-      return;
+    if (!sessionRate || parseFloat(sessionRate) <= 0) {
+      Alert.alert('Rate Required', 'Please set a valid session rate.')
+      return
     }
 
     try {
       const expertProfileData = {
         specialization: selectedSpecialization,
         bio: bio.trim(),
-        hourlyRate: parseFloat(hourlyRate),
+        sessionRate: parseFloat(sessionRate),
         rating: 0,
         totalConsultations: 0,
         isVerified: false,
         isOnline: false,
-      };
+      }
 
-      await dataProvider.createExpertProfile(expertProfileData);
-      await refreshCompleteProfile();
-      
+      // The dataProvider.createExpertProfile() will automatically include authentication
+      // via the Authorization header with the stored JWT token
+      await dataProvider.createExpertProfile(expertProfileData)
+      await syncUserData()
+
       Alert.alert(
         'Welcome, Expert!',
         'Your expert profile has been created successfully. You can now offer consultations to shoppers.',
-        [{ text: 'Get Started', onPress: () => router.push('/(expert)/profile-management') }]
-      );
+        [{ text: 'Get Started', onPress: () => router.push('/(expert)/profile-management') }],
+      )
     } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to create expert profile'
-      );
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create expert profile')
     }
-  };
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.title}>🎯 Become an Expert</Text>
-          <Text style={styles.subtitle}>
-            Share your expertise and help shoppers make better decisions
-          </Text>
-        </View>
+    <View style={styles.container}>
+      <GradientHeader 
+        title="Become an Expert"
+        subtitle="Share your expertise and help shoppers make better decisions"
+      />
+      <SafeAreaView style={styles.contentContainer}>
+        <ScrollView style={styles.scrollView}>
 
         {/* Specialization Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Specialization</Text>
-          <Text style={styles.sectionDescription}>
-            What's your main area of expertise?
-          </Text>
+          <Text style={styles.sectionDescription}>What's your main area of expertise?</Text>
           <View style={styles.tagsContainer}>
             {specializations.map((specialization) => (
               <TouchableOpacity
                 key={specialization}
-                style={[
-                  styles.tag,
-                  selectedSpecialization === specialization && styles.selectedTag
-                ]}
+                style={[styles.tag, selectedSpecialization === specialization && styles.selectedTag]}
                 onPress={() => setSelectedSpecialization(specialization)}
               >
-                <Text style={[
-                  styles.tagText,
-                  selectedSpecialization === specialization && styles.selectedTagText
-                ]}>
+                <Text style={[styles.tagText, selectedSpecialization === specialization && styles.selectedTagText]}>
                   {specialization}
                 </Text>
               </TouchableOpacity>
@@ -124,29 +115,27 @@ export default function ExpertOnboarding() {
           <Text style={styles.charCount}>{bio.length}/300</Text>
         </View>
 
-        {/* Hourly Rate Section */}
+        {/* Session Rate Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Hourly Rate</Text>
-          <Text style={styles.sectionDescription}>
-            Set your consultation rate (in SOL per hour)
-          </Text>
+          <Text style={styles.sectionTitle}>Session Rate</Text>
+          <Text style={styles.sectionDescription}>Set your consultation rate (in SOL per 5-minute session)</Text>
           <View style={styles.rateContainer}>
             <Text style={styles.ratePrefix}>◎</Text>
             <TextInput
               style={styles.rateInput}
-              value={hourlyRate}
-              onChangeText={setHourlyRate}
+              value={sessionRate}
+              onChangeText={setSessionRate}
               keyboardType="decimal-pad"
               placeholder="0.10"
             />
-            <Text style={styles.rateSuffix}>SOL/hour</Text>
+            <Text style={styles.rateSuffix}>SOL/session</Text>
           </View>
-          
+
           <View style={styles.rateExamples}>
-            <Text style={styles.rateExampleTitle}>Rate Guidelines:</Text>
-            <Text style={styles.rateExample}>• Beginner: 0.05 - 0.10 SOL/hour</Text>
-            <Text style={styles.rateExample}>• Experienced: 0.10 - 0.25 SOL/hour</Text>
-            <Text style={styles.rateExample}>• Expert: 0.25+ SOL/hour</Text>
+            <Text style={styles.rateExampleTitle}>Rate Guidelines (per 5-minute session):</Text>
+            <Text style={styles.rateExample}>• Beginner: 0.05 - 0.10 SOL/session</Text>
+            <Text style={styles.rateExample}>• Experienced: 0.10 - 0.25 SOL/session</Text>
+            <Text style={styles.rateExample}>• Expert: 0.25+ SOL/session</Text>
           </View>
         </View>
 
@@ -155,39 +144,26 @@ export default function ExpertOnboarding() {
           onPress={handleComplete}
           disabled={isLoading}
         >
-          <Text style={styles.completeButtonText}>
-            {isLoading ? 'Creating Profile...' : 'Complete Expert Setup'}
-          </Text>
+          <Text style={styles.completeButtonText}>{isLoading ? 'Creating Profile...' : 'Complete Expert Setup'}</Text>
         </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
-  );
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#fefefe',
+  },
+  contentContainer: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },
   scrollView: {
     flex: 1,
     padding: 20,
-  },
-  header: {
-    marginBottom: 32,
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1e293b',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 22,
   },
   section: {
     marginBottom: 32,
@@ -304,4 +280,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-});
+})

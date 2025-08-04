@@ -1,8 +1,11 @@
 import { useAuth } from '@/components/auth/auth-provider'
-import { router } from 'expo-router'
-import React, { useEffect, useState } from 'react'
+import { GradientHeader } from '@/components/common/GradientHeader'
+import { router, useFocusEffect } from 'expo-router'
+import React, { useEffect, useState, useCallback } from 'react'
 import { FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
 import { sessionService, SessionWithDetails } from '@/services/sessionService'
+import { localSessionStorage } from '@/services/localSessionStorage'
 import { LoadingSpinner, LoadingState } from '@/components/common/LoadingSpinner'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 import { videoCallNavigation } from '@/utils/videoCallNavigation'
@@ -31,6 +34,13 @@ const SessionsScreen: React.FC = () => {
     loadSessions()
   }, [])
 
+  // Reload sessions when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadSessions(true)
+    }, [])
+  )
+
   const loadSessions = async (isRefresh = false) => {
     try {
       if (isRefresh) {
@@ -40,64 +50,41 @@ const SessionsScreen: React.FC = () => {
       }
       setError(null)
 
-      const sessionData = await sessionService.getUserSessions()
+      let sessionData: SessionWithDetails[] = []
+
+      // Try to get sessions from API first
+      try {
+        sessionData = await sessionService.getUserSessions()
+      } catch (apiError) {
+        console.warn('Failed to load sessions from API, trying local storage:', apiError)
+        
+        // Fallback to local storage
+        const localSessions = await localSessionStorage.getSessions()
+        sessionData = await Promise.all(
+          localSessions.map(localSession => localSessionStorage.convertToSessionWithDetails(localSession))
+        )
+      }
 
       // Convert backend session format to component format
       const formattedSessions: Session[] = sessionData.map((session: SessionWithDetails) => ({
         id: session.id,
         expertId: session.expertId,
-        expertName: session.expertName,
-        expertSpecialization: session.expertSpecialization,
+        expertName: session.expertName || 'Unknown Expert',
+        expertSpecialization: session.expertSpecialization || 'General',
         date: session.startTime,
-        duration: 5, // Default duration - could be calculated from start/end time
+        duration: session.endTime ? 
+          Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / (1000 * 60)) : 
+          5, // Calculate actual duration or default to 5 minutes
         status: mapSessionStatus(session.status),
-        cost: parseFloat(session.amount),
+        cost: parseFloat(session.amount || '0'),
         // TODO: Add rating and review from backend when implemented
       }))
 
       setSessions(formattedSessions)
     } catch (err) {
-      console.error('Failed to load sessions:', err)
+      console.error('Failed to load sessions from both API and local storage:', err)
       setError(err instanceof Error ? err.message : 'Failed to load sessions')
-
-      // Fallback to mock data if API fails
-      const mockSessions: Session[] = [
-        {
-          id: '1',
-          expertId: '1',
-          expertName: 'Dr. Sarah Johnson',
-          expertSpecialization: 'Fashion & Style',
-          date: '2024-01-15T14:30:00Z',
-          duration: 5,
-          status: 'completed',
-          cost: 0.01,
-          rating: 5,
-          review: 'Excellent advice on wardrobe choices!',
-        },
-        {
-          id: '2',
-          expertId: '2',
-          expertName: 'Mike Chen',
-          expertSpecialization: 'Tech & Gadgets',
-          date: '2024-01-12T10:00:00Z',
-          duration: 5,
-          status: 'completed',
-          cost: 0.01,
-          rating: 4,
-          review: 'Very helpful with laptop recommendations.',
-        },
-        {
-          id: '3',
-          expertId: '3',
-          expertName: 'Emma Davis',
-          expertSpecialization: 'Home & Garden',
-          date: '2024-01-20T16:00:00Z',
-          duration: 5,
-          status: 'upcoming',
-          cost: 0.01,
-        },
-      ]
-      setSessions(mockSessions)
+      setSessions([])
     } finally {
       setIsLoading(false)
       setRefreshing(false)
@@ -105,17 +92,18 @@ const SessionsScreen: React.FC = () => {
   }
 
   const mapSessionStatus = (backendStatus: string): Session['status'] => {
-    switch (backendStatus) {
+    switch (backendStatus?.toLowerCase()) {
       case 'pending':
-        return 'upcoming'
+        return 'pending'
       case 'active':
-        return 'upcoming'
+        return 'active'
       case 'completed':
         return 'completed'
       case 'cancelled':
         return 'cancelled'
       default:
-        return 'upcoming'
+        console.warn(`Unknown session status: ${backendStatus}`)
+        return 'pending'
     }
   }
 
@@ -134,6 +122,9 @@ const SessionsScreen: React.FC = () => {
     switch (status) {
       case 'completed':
         return '#10b981'
+      case 'active':
+        return '#f59e0b'
+      case 'pending':
       case 'upcoming':
         return '#6366f1'
       case 'cancelled':
@@ -144,34 +135,34 @@ const SessionsScreen: React.FC = () => {
   }
 
   const handleSessionPress = async (session: Session) => {
-    if (session.status === 'upcoming') {
+    if (session.status === 'upcoming' || session.status === 'pending') {
       Alert.alert('Join Session', `Are you ready to start your consultation with ${session.expertName}?`, [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Join Video Call',
           onPress: async () => {
             try {
-              if (!user?.profile?.id) {
-                Alert.alert('Error', 'User not authenticated');
-                return;
+              if (!user?.user?.id) {
+                Alert.alert('Error', 'User not authenticated')
+                return
               }
 
               // Check if video calling is available
-              const isAvailable = await videoCallNavigation.isVideoCallAvailable();
+              const isAvailable = await videoCallNavigation.isVideoCallAvailable()
               if (!isAvailable) {
-                Alert.alert('Video Call Unavailable', 'Video calling is not configured. Please check your settings.');
-                return;
+                Alert.alert('Video Call Unavailable', 'Video calling is not configured. Please check your settings.')
+                return
               }
 
               // Start video call with both participants
               await videoCallNavigation.startVideoCall({
                 sessionId: session.id,
-                userId: user.profile.id,
-                participantIds: [user.profile.id, session.expertId],
-              });
+                userId: user.user.id,
+                participantIds: [user.user.id, session.expertId],
+              })
             } catch (error) {
-              console.error('Failed to start video call:', error);
-              Alert.alert('Error', 'Failed to start video call. Please try again.');
+              console.error('Failed to start video call:', error)
+              Alert.alert('Error', 'Failed to start video call. Please try again.')
             }
           },
         },
@@ -184,18 +175,18 @@ const SessionsScreen: React.FC = () => {
           text: 'Rejoin Call',
           onPress: async () => {
             try {
-              if (!user?.profile?.id) {
-                Alert.alert('Error', 'User not authenticated');
-                return;
+              if (!user?.user?.id) {
+                Alert.alert('Error', 'User not authenticated')
+                return
               }
 
               await videoCallNavigation.joinVideoCall({
                 sessionId: session.id,
-                userId: user.profile.id,
-              });
+                userId: user.user.id,
+              })
             } catch (error) {
-              console.error('Failed to join video call:', error);
-              Alert.alert('Error', 'Failed to join video call. Please try again.');
+              console.error('Failed to join video call:', error)
+              Alert.alert('Error', 'Failed to join video call. Please try again.')
             }
           },
         },
@@ -212,19 +203,23 @@ const SessionsScreen: React.FC = () => {
 
   const renderSessionCard = ({ item }: { item: Session }) => (
     <TouchableOpacity style={styles.sessionCard} onPress={() => handleSessionPress(item)}>
-      <View style={styles.sessionHeader}>
-        <View style={styles.sessionInfo}>
-          <Text style={styles.expertName}>{item.expertName}</Text>
-          <Text style={styles.specialization}>{item.expertSpecialization}</Text>
-          <Text style={styles.date}>{formatDate(item.date)}</Text>
+      <LinearGradient
+        colors={['#fefefe', '#f8fafc']}
+        style={styles.sessionCardGradient}
+      >
+        <View style={styles.sessionHeader}>
+          <View style={styles.sessionInfo}>
+            <Text style={styles.expertName}>{item.expertName}</Text>
+            <Text style={styles.specialization}>{item.expertSpecialization}</Text>
+            <Text style={styles.date}>{formatDate(item.date)}</Text>
+          </View>
+          <View style={styles.sessionStatus}>
+            <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
+            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            </Text>
+          </View>
         </View>
-        <View style={styles.sessionStatus}>
-          <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(item.status) }]} />
-          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-          </Text>
-        </View>
-      </View>
 
       <View style={styles.sessionDetails}>
         <View style={styles.detailItem}>
@@ -249,68 +244,92 @@ const SessionsScreen: React.FC = () => {
         </View>
       )}
 
-      {item.status === 'upcoming' && (
+      {(item.status === 'upcoming' || item.status === 'pending') && (
         <View style={styles.actionContainer}>
           <Text style={styles.actionText}>Tap to join session</Text>
         </View>
       )}
+      {item.status === 'active' && (
+        <View style={[styles.actionContainer, { backgroundColor: '#f59e0b' }]}>
+          <Text style={styles.actionText}>Tap to rejoin session</Text>
+        </View>
+      )}
+      </LinearGradient>
     </TouchableOpacity>
   )
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <LoadingSpinner message="Loading your sessions..." />
-      </SafeAreaView>
+      <View style={styles.container}>
+        <GradientHeader 
+          title="My Sessions"
+          subtitle="Your consultation history"
+        />
+        <SafeAreaView style={styles.contentContainer}>
+          <LoadingSpinner message="Loading your sessions..." />
+        </SafeAreaView>
+      </View>
     )
   }
 
   if (error && sessions.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>⚠️</Text>
-          <Text style={styles.errorTitle}>Failed to Load Sessions</Text>
-          <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <GradientHeader 
+          title="My Sessions"
+          subtitle="Your consultation history"
+        />
+        <SafeAreaView style={styles.contentContainer}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorTitle}>Failed to Load Sessions</Text>
+            <Text style={styles.errorMessage}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
     )
   }
 
   return (
     <ErrorBoundary>
-      <SafeAreaView style={styles.container}>
-        {error && sessions.length > 0 && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>Some data may be outdated</Text>
-          </View>
-        )}
-        {sessions.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>=�</Text>
-            <Text style={styles.emptyTitle}>No Sessions Yet</Text>
-            <Text style={styles.emptyText}>
-              You haven't booked any consultation sessions yet. Start by finding an expert!
-            </Text>
-            <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(expert)/list')}>
-              <Text style={styles.emptyButtonText}>Find Experts</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <FlatList
-            data={sessions}
-            renderItem={renderSessionCard}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-            refreshing={refreshing}
-            onRefresh={() => loadSessions(true)}
-          />
-        )}
-      </SafeAreaView>
+      <View style={styles.container}>
+        <GradientHeader 
+          title="My Sessions"
+          subtitle="Your consultation history"
+        />
+        <SafeAreaView style={styles.contentContainer}>
+          {error && sessions.length > 0 && (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorBannerText}>Some data may be outdated</Text>
+            </View>
+          )}
+          {sessions.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>📅</Text>
+              <Text style={styles.emptyTitle}>No Sessions Yet</Text>
+              <Text style={styles.emptyText}>
+                You haven't booked any consultation sessions yet. Start by finding an expert!
+              </Text>
+              <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(tabs)/explore')}>
+                <Text style={styles.emptyButtonText}>Find Experts</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              data={sessions}
+              renderItem={renderSessionCard}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContainer}
+              showsVerticalScrollIndicator={false}
+              refreshing={refreshing}
+              onRefresh={() => loadSessions(true)}
+            />
+          )}
+        </SafeAreaView>
+      </View>
     </ErrorBoundary>
   )
 }
@@ -318,15 +337,17 @@ const SessionsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fefefe',
+  },
+  contentContainer: {
+    flex: 1,
     backgroundColor: '#f8fafc',
   },
   listContainer: {
     padding: 16,
   },
   sessionCard: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
-    padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: {
@@ -336,6 +357,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    overflow: 'hidden',
+  },
+  sessionCardGradient: {
+    padding: 16,
+    borderRadius: 12,
   },
   sessionHeader: {
     flexDirection: 'row',
@@ -349,18 +375,18 @@ const styles = StyleSheet.create({
   expertName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#3b82f6',
     marginBottom: 4,
   },
   specialization: {
     fontSize: 14,
-    color: '#6366f1',
+    color: '#60faaa',
     fontWeight: '600',
     marginBottom: 4,
   },
   date: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#60a5fa',
   },
   sessionStatus: {
     flexDirection: 'row',
@@ -392,7 +418,7 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#3b82f6',
   },
   reviewContainer: {
     backgroundColor: '#f9fafb',
@@ -406,7 +432,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   actionContainer: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#3b82f6',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -449,7 +475,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   emptyButton: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#3b82f6',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -483,7 +509,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#3b82f6',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

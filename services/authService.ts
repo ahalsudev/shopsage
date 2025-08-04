@@ -1,65 +1,45 @@
+import { UserCompleteProfile } from '@/types/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import axios from 'axios'
-import { AppConfig, log } from '../config/environment'
-import { User } from '../types/auth'
+import { log } from '../config/environment'
 import { dataProvider } from './dataProvider'
 import { userService } from './userService'
 
-const API_BASE_URL = AppConfig.api.baseUrl
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// Add token to requests if available
-api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
 export interface ConnectWalletResponse {
   token: string
-  user: User
+  user: UserCompleteProfile
 }
 
 export const authService = {
   async connectWallet(
     walletAddress: string,
     name: string,
-    userType?: 'shopper' | 'expert',
+    email: string,
   ): Promise<ConnectWalletResponse> {
     try {
       log.info('AuthService: Registering user', {
         walletAddress,
         name,
-        userType,
-        useRemoteApi: AppConfig.api.useRemoteApi,
+        email,
       })
 
       // Use data provider abstraction
-      const result = await dataProvider.registerUser(walletAddress, name, userType)
+      const result = await dataProvider.registerUser(walletAddress, name, email)
 
       // Store token locally
       await AsyncStorage.setItem('token', result.token)
 
+      console.log("<>>>>>>", result);
+      
+
       // Save complete user data locally for persistence
       await userService.saveUserDataLocally(result.user)
 
-      log.info('Connected user successfully:', result.user.profile.name)
+      log.info('Connected user successfully:', result.user.user.name)
 
       return result
     } catch (error) {
       log.error('Failed to connect wallet:', error)
-
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to connect wallet')
-      }
       throw error
     }
   },

@@ -4,18 +4,10 @@ export default function CallLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: '#ffffff',
-        },
-        headerTintColor: '#6366f1',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          color: '#1e293b',
-        },
+        headerShown: false,
       }}
     >
-      <Stack.Screen name="video-call" options={{ title: 'Video Call' }} />
+      <Stack.Screen name="video-call" />
     </Stack>
   )
 }

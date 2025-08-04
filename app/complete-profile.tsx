@@ -6,7 +6,7 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function CompleteProfile() {
-  const { isLoading, isRegistered, isAuthenticated, updateUser } = useAuth()
+  const { isLoading, updateUser } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const router = useRouter()
@@ -25,30 +25,30 @@ export default function CompleteProfile() {
     try {
       let walletAddress = await userService.loadWalletAddressLocally()
       console.log('Starting registration with wallet:', walletAddress)
-      
+
       // Add timeout for registration
-      const registrationPromise = userService.registerUser({ walletAddress, name, email })
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Registration timeout - backend may be unavailable')), 10000)
-      )
-      
-      let response = await Promise.race([registrationPromise, timeoutPromise])
-      console.log('Registration successful:', response)
-      
-      await updateUser({
-        profile: response.user.profile,
-      })
-      router.push('/(profile)/home')
+      if (walletAddress !== null) {
+        const registrationPromise = userService.registerUser({ walletAddress, name, email })
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Registration timeout - backend may be unavailable')), 10000),
+        )
+  
+        let response = await Promise.race([registrationPromise, timeoutPromise])
+        let user = response.user
+        console.log('Registration successful:', user, response.token)
+
+        await updateUser({
+          user: user.user,
+          shopperProfile: user.shopper,
+          expertProfile: user.expert,
+        })
+        router.push('/(tabs)/explore')
+      }
     } catch (error) {
       console.error('Registration failed:', error)
-      Alert.alert(
-        'Registration Failed', 
-        error instanceof Error ? error.message : 'Failed to register user',
-        [
-          { text: 'Retry', onPress: () => handleRegister() },
-          { text: 'Skip for Now', onPress: () => router.push('/(profile)/home') }
-        ]
-      )
+      Alert.alert('Registration Failed', error instanceof Error ? error.message : 'Failed to register user', [
+        { text: 'Retry', onPress: () => handleRegister() },
+      ])
     }
   }
 
@@ -57,7 +57,7 @@ export default function CompleteProfile() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Complete Your Registration</Text>
-          <Text style={styles.subtitle}>Add a name and role to cater you experience</Text>
+          <Text style={styles.subtitle}>Add a name and email to complete registration</Text>
         </View>
 
         {/* Name Input */}
@@ -90,14 +90,6 @@ export default function CompleteProfile() {
           disabled={isLoading}
         >
           <Text style={styles.connectButtonText}>{isLoading ? 'Registering...' : 'Register'}</Text>
-        </TouchableOpacity>
-
-        {/* Quick Demo Mode Button */}
-        <TouchableOpacity
-          style={[styles.demoButton, { marginTop: 16, alignSelf: 'center' }]}
-          onPress={() => router.push('/(profile)/home')}
-        >
-          <Text style={styles.demoButtonText}>Skip Registration (Demo Mode)</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

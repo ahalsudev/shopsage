@@ -3,8 +3,8 @@
  * Provides realistic dummy data when not using remote API
  */
 
-import { User, UserProfile, ShopperProfile, ExpertProfile } from '../types/auth'
 import { SessionWithDetails } from '../services/sessionService'
+import { ExpertProfile, User } from '../types/auth'
 
 // Utility function to generate random IDs
 const generateId = (): string => {
@@ -49,7 +49,7 @@ export const mockUsers: User[] = [
     expertProfile: {
       specialization: 'Tech Support',
       bio: 'Experienced tech consultant with 8+ years in consumer electronics and software troubleshooting.',
-      hourlyRate: 0.05,
+      sessionRate: 0.05,
       rating: 4.8,
       totalConsultations: 156,
       isVerified: true,
@@ -106,7 +106,7 @@ export const mockExperts: ExpertProfile[] = [
   {
     specialization: 'Fashion Consulting',
     bio: 'Personal stylist and fashion consultant helping you find your perfect look for any occasion.',
-    hourlyRate: 0.08,
+    sessionRate: 0.08,
     rating: 4.9,
     totalConsultations: 89,
     isVerified: true,
@@ -134,7 +134,7 @@ export const mockExperts: ExpertProfile[] = [
   {
     specialization: 'Home Improvement',
     bio: 'DIY expert and contractor with 15+ years experience in home renovation and improvement projects.',
-    hourlyRate: 0.06,
+    sessionRate: 0.06,
     rating: 4.7,
     totalConsultations: 203,
     isVerified: true,
@@ -162,7 +162,7 @@ export const mockExperts: ExpertProfile[] = [
   {
     specialization: 'Fitness Coaching',
     bio: 'Certified personal trainer and nutrition coach helping you achieve your health and fitness goals.',
-    hourlyRate: 0.07,
+    sessionRate: 0.07,
     rating: 4.8,
     totalConsultations: 124,
     isVerified: true,
@@ -190,7 +190,7 @@ export const mockExperts: ExpertProfile[] = [
   {
     specialization: 'Financial Advice',
     bio: 'Certified financial planner offering guidance on investments, budgeting, and financial planning.',
-    hourlyRate: 0.12,
+    sessionRate: 0.12,
     rating: 4.9,
     totalConsultations: 67,
     isVerified: true,

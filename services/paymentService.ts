@@ -1,27 +1,8 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
-import axios from 'axios'
 import { PLATFORM_CONFIG } from '../constants/programs'
+import { dataProvider } from './dataProvider'
 import { solanaUtils } from '../utils/solana'
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.8.153:3001/api'
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// Add token to requests if available
-api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
 
 export interface ProcessPaymentRequest {
   sessionId: string
@@ -83,47 +64,40 @@ export interface ProgramPaymentParams {
 export const paymentService = {
   async processPayment(paymentData: ProcessPaymentRequest): Promise<ProcessPaymentResponse> {
     try {
-      const response = await api.post('/payments/process', {
-        session_id: paymentData.sessionId,
-        transaction_hash: paymentData.transactionHash,
+      const response = await dataProvider.processPayment({
+        sessionId: paymentData.sessionId,
+        transactionHash: paymentData.transactionHash,
       })
 
       return {
         payment: {
-          id: response.data.payment.id,
-          sessionId: response.data.payment.session_id,
-          amount: response.data.payment.amount,
-          status: response.data.payment.status,
-          transactionHash: response.data.payment.transaction_hash,
-          createdAt: response.data.payment.created_at,
-          updatedAt: response.data.payment.updated_at,
+          id: response.payment.id,
+          sessionId: response.payment.session_id,
+          amount: response.payment.amount,
+          status: response.payment.status,
+          transactionHash: response.payment.transaction_hash,
+          createdAt: response.payment.created_at,
+          updatedAt: response.payment.updated_at,
         },
         session: {
-          id: response.data.session.id,
-          expertId: response.data.session.expert_id,
-          shopperId: response.data.session.shopper_id,
-          status: response.data.session.status,
-          amount: response.data.session.amount,
-          paymentStatus: response.data.session.payment_status,
-          transactionHash: response.data.session.transaction_hash,
+          id: response.session.id,
+          expertId: response.session.expert_id,
+          shopperId: response.session.shopper_id,
+          status: response.session.status,
+          amount: response.session.amount,
+          paymentStatus: response.session.payment_status,
+          transactionHash: response.session.transaction_hash,
         },
       }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to process payment')
-      }
       throw error
     }
   },
 
   async getPaymentHistory(): Promise<PaymentWithDetails[]> {
     try {
-      const response = await api.get('/payments/history')
-      return response.data.payments
+      return await dataProvider.getPaymentHistory()
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get payment history')
-      }
       throw error
     }
   },

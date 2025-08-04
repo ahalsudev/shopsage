@@ -1,20 +1,20 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useAuth } from './auth/auth-provider';
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import React, { useEffect, useState } from 'react'
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useAuth } from './auth/auth-provider'
 
 interface RoleManagerProps {
-  style?: any;
+  style?: any
 }
 
 export const RoleManager: React.FC<RoleManagerProps> = ({ style }) => {
-  const { user } = useAuth();
-  const [activeRole, setActiveRole] = useState<'shopper' | 'expert' | 'dual'>('shopper');
+  const { user } = useAuth()
+  const [activeRole, setActiveRole] = useState<'shopper' | 'expert' | 'dual'>('shopper')
 
   useEffect(() => {
     // Load saved active role preference
-    loadActiveRole();
-  }, []);
+    loadActiveRole()
+  }, [])
 
   useEffect(() => {
     // Auto-set role based on available profiles
@@ -22,43 +22,43 @@ export const RoleManager: React.FC<RoleManagerProps> = ({ style }) => {
       if (user.roles.canShop && user.roles.canExpert) {
         // Both roles available - use saved preference or default to dual
         if (!activeRole || activeRole === 'dual') {
-          setActiveRole('dual');
+          setActiveRole('dual')
         }
       } else if (user.roles.canExpert) {
-        setActiveRole('expert');
+        setActiveRole('expert')
       } else if (user.roles.canShop) {
-        setActiveRole('shopper');
+        setActiveRole('shopper')
       }
     }
-  }, [user?.roles]);
+  }, [user?.roles])
 
   const loadActiveRole = async () => {
     try {
-      const savedRole = await AsyncStorage.getItem('activeRole');
+      const savedRole = await AsyncStorage.getItem('activeRole')
       if (savedRole && ['shopper', 'expert', 'dual'].includes(savedRole)) {
-        setActiveRole(savedRole as 'shopper' | 'expert' | 'dual');
+        setActiveRole(savedRole as 'shopper' | 'expert' | 'dual')
       }
     } catch (error) {
-      console.log('Failed to load active role:', error);
+      console.log('Failed to load active role:', error)
     }
-  };
+  }
 
   const saveActiveRole = async (role: 'shopper' | 'expert' | 'dual') => {
     try {
-      await AsyncStorage.setItem('activeRole', role);
+      await AsyncStorage.setItem('activeRole', role)
     } catch (error) {
-      console.log('Failed to save active role:', error);
+      console.log('Failed to save active role:', error)
     }
-  };
+  }
 
   const handleRoleSwitch = async (role: 'shopper' | 'expert' | 'dual') => {
-    setActiveRole(role);
-    await saveActiveRole(role);
-  };
+    setActiveRole(role)
+    await saveActiveRole(role)
+  }
 
   // Don't show if user doesn't have both roles
   if (!user?.roles?.canShop || !user?.roles?.canExpert) {
-    return null;
+    return null
   }
 
   return (
@@ -66,53 +66,29 @@ export const RoleManager: React.FC<RoleManagerProps> = ({ style }) => {
       <Text style={styles.title}>Active View</Text>
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={[
-            styles.roleButton,
-            activeRole === 'shopper' && styles.activeButton
-          ]}
+          style={[styles.roleButton, activeRole === 'shopper' && styles.activeButton]}
           onPress={() => handleRoleSwitch('shopper')}
         >
-          <Text style={[
-            styles.roleText,
-            activeRole === 'shopper' && styles.activeText
-          ]}>
-            🛍️ Shopper
-          </Text>
+          <Text style={[styles.roleText, activeRole === 'shopper' && styles.activeText]}>🛍️ Shopper</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.roleButton,
-            activeRole === 'dual' && styles.activeButton
-          ]}
+          style={[styles.roleButton, activeRole === 'dual' && styles.activeButton]}
           onPress={() => handleRoleSwitch('dual')}
         >
-          <Text style={[
-            styles.roleText,
-            activeRole === 'dual' && styles.activeText
-          ]}>
-            ⚡ Both
-          </Text>
+          <Text style={[styles.roleText, activeRole === 'dual' && styles.activeText]}>⚡ Both</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.roleButton,
-            activeRole === 'expert' && styles.activeButton
-          ]}
+          style={[styles.roleButton, activeRole === 'expert' && styles.activeButton]}
           onPress={() => handleRoleSwitch('expert')}
         >
-          <Text style={[
-            styles.roleText,
-            activeRole === 'expert' && styles.activeText
-          ]}>
-            🎯 Expert
-          </Text>
+          <Text style={[styles.roleText, activeRole === 'expert' && styles.activeText]}>🎯 Expert</Text>
         </TouchableOpacity>
       </View>
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -153,30 +129,30 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '600',
   },
-});
+})
 
 // Hook to get current active role
 export const useActiveRole = () => {
-  const [activeRole, setActiveRole] = useState<'shopper' | 'expert' | 'dual'>('shopper');
+  const [activeRole, setActiveRole] = useState<'shopper' | 'expert' | 'dual'>('shopper')
 
   useEffect(() => {
     const loadRole = async () => {
       try {
-        const savedRole = await AsyncStorage.getItem('activeRole');
+        const savedRole = await AsyncStorage.getItem('activeRole')
         if (savedRole && ['shopper', 'expert', 'dual'].includes(savedRole)) {
-          setActiveRole(savedRole as 'shopper' | 'expert' | 'dual');
+          setActiveRole(savedRole as 'shopper' | 'expert' | 'dual')
         }
       } catch (error) {
-        console.log('Failed to load active role:', error);
+        console.log('Failed to load active role:', error)
       }
-    };
+    }
 
-    loadRole();
+    loadRole()
 
     // Listen for changes
-    const interval = setInterval(loadRole, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    const interval = setInterval(loadRole, 1000)
+    return () => clearInterval(interval)
+  }, [])
 
-  return activeRole;
-};
+  return activeRole
+}

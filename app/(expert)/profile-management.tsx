@@ -4,6 +4,7 @@ import {
   toggleCurrentUserOnlineStatus,
   updateCurrentUserProfile,
 } from '@/store/thunks/expertThunks'
+import { GradientHeader } from '@/components/common/GradientHeader'
 import { useNavigation } from '@react-navigation/native'
 import { StackNavigationProp } from '@react-navigation/stack'
 import { router } from 'expo-router'
@@ -35,7 +36,7 @@ const ExpertProfileManagementScreen: React.FC = () => {
   // Form state
   const [specialization, setSpecialization] = useState('')
   const [bio, setBio] = useState('')
-  const [hourlyRate, setHourlyRate] = useState('')
+  const [sessionRate, setsessionRate] = useState('')
   const [profileImageUrl, setProfileImageUrl] = useState('')
   const [isOnline, setIsOnline] = useState(false)
 
@@ -44,34 +45,35 @@ const ExpertProfileManagementScreen: React.FC = () => {
   }, [dispatch])
 
   useEffect(() => {
-    if (currentUserProfile) {
+    if (currentUserProfile !== null) {
       // Initialize form state with current profile data
-      setSpecialization(currentUserProfile.specialization)
-      setBio(currentUserProfile.bio || '')
-      setHourlyRate(currentUserProfile.hourlyRate.toString())
-      setProfileImageUrl(currentUserProfile.profileImageUrl || '')
-      setIsOnline(currentUserProfile.isOnline)
+      setSpecialization(currentUserProfile?.specialization || '')
+      setBio(currentUserProfile?.bio || '')
+      // Handle both sessionRate and hourlyRate for backward compatibility
+      const rate = currentUserProfile?.sessionRate || (currentUserProfile as any)?.hourlyRate || 0
+      setsessionRate(rate.toString())
+      setProfileImageUrl(currentUserProfile?.profileImageUrl || '')
+      setIsOnline(currentUserProfile?.isOnline || false)
     }
   }, [currentUserProfile])
 
   const handleSaveProfile = async () => {
-    if (!specialization.trim() || !hourlyRate.trim()) {
-      Alert.alert('Error', 'Please fill in specialization and hourly rate')
+    if (!specialization.trim() || !sessionRate.trim()) {
+      Alert.alert('Error', 'Please fill in specialization and session rate')
       return
     }
 
-    const rate = parseFloat(hourlyRate)
+    const rate = parseFloat(sessionRate)
     if (isNaN(rate) || rate <= 0) {
-      Alert.alert('Error', 'Please enter a valid hourly rate')
+      Alert.alert('Error', 'Please enter a valid session rate')
       return
     }
 
     const profileData = {
       specialization: specialization.trim(),
       bio: bio.trim() || undefined,
-      hourlyRate: rate,
+      sessionRate: rate,
       profileImageUrl: profileImageUrl.trim() || undefined,
-      isOnline,
     }
 
     try {
@@ -109,51 +111,90 @@ const ExpertProfileManagementScreen: React.FC = () => {
   const handleCancelEdit = () => {
     // Reset form state to original values
     if (currentUserProfile) {
-      setSpecialization(currentUserProfile.specialization)
+      setSpecialization(currentUserProfile.specialization || '')
       setBio(currentUserProfile.bio || '')
-      setHourlyRate(currentUserProfile.hourlyRate.toString())
+      // Handle both sessionRate and hourlyRate for backward compatibility
+      const rate = currentUserProfile.sessionRate || (currentUserProfile as any)?.hourlyRate || 0
+      setsessionRate(rate.toString())
       setProfileImageUrl(currentUserProfile.profileImageUrl || '')
-      setIsOnline(currentUserProfile.isOnline)
+      setIsOnline(currentUserProfile.isOnline || false)
     }
     setIsEditing(false)
   }
 
   if (profileLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text style={styles.loadingText}>Loading profile...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <GradientHeader 
+          title="Expert Profile"
+          subtitle="Manage your expert profile and settings"
+        />
+        <SafeAreaView style={styles.contentContainer}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366f1" />
+            <Text style={styles.loadingText}>Loading profile...</Text>
+          </View>
+        </SafeAreaView>
+      </View>
+    )
+  }
+
+  if (profileError) {
+    return (
+      <View style={styles.container}>
+        <GradientHeader 
+          title="Expert Profile"
+          subtitle="Manage your expert profile and settings"
+        />
+        <SafeAreaView style={styles.contentContainer}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorTitle}>Error Loading Profile</Text>
+            <Text style={styles.errorText}>{profileError}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(fetchCurrentUserProfile())}>
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
     )
   }
 
   if (!currentUserProfile && !profileLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorIcon}>👨‍💼</Text>
-          <Text style={styles.errorTitle}>Create Your Expert Profile</Text>
-          <Text style={styles.errorText}>You need to complete your expert profile to start helping shoppers.</Text>
-          <TouchableOpacity style={styles.createProfileButton} onPress={() => router.push('/(expert)/registration')}>
-            <Text style={styles.createProfileButtonText}>Create Profile</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(fetchCurrentUserProfile())}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <GradientHeader 
+          title="Expert Profile"
+          subtitle="Manage your expert profile and settings"
+        />
+        <SafeAreaView style={styles.contentContainer}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorIcon}>👨‍💼</Text>
+            <Text style={styles.errorTitle}>Create Your Expert Profile</Text>
+            <Text style={styles.errorText}>You need to complete your expert profile to start helping shoppers.</Text>
+            <TouchableOpacity style={styles.createProfileButton} onPress={() => router.push('/(expert)/registration')}>
+              <Text style={styles.createProfileButtonText}>Create Profile</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.retryButton} onPress={() => dispatch(fetchCurrentUserProfile())}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
     )
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Expert Profile</Text>
+    <View style={styles.container}>
+      <GradientHeader 
+        title="Expert Profile"
+        subtitle="Manage your expert profile and settings"
+      />
+      <SafeAreaView style={styles.contentContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.content}>
+          {/* Edit Button */}
+          <View style={styles.editButtonContainer}>
             <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(!isEditing)}>
               <Text style={styles.editButtonText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
             </TouchableOpacity>
@@ -162,15 +203,15 @@ const ExpertProfileManagementScreen: React.FC = () => {
           {/* Profile Stats */}
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{currentUserProfile.rating.toFixed(1)}</Text>
+              <Text style={styles.statValue}>{currentUserProfile?.rating?.toFixed(1)}</Text>
               <Text style={styles.statLabel}>Rating</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{currentUserProfile.totalConsultations}</Text>
+              <Text style={styles.statValue}>{currentUserProfile?.totalConsultations}</Text>
               <Text style={styles.statLabel}>Consultations</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{currentUserProfile.isVerified ? '✓' : '✗'}</Text>
+              <Text style={styles.statValue}>{currentUserProfile?.isVerified ? '✓' : '✗'}</Text>
               <Text style={styles.statLabel}>Verified</Text>
             </View>
           </View>
@@ -215,13 +256,13 @@ const ExpertProfileManagementScreen: React.FC = () => {
                 />
               </View>
 
-              {/* Hourly Rate Input */}
+              {/* Session Rate Input */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Hourly Rate (SOL) *</Text>
+                <Text style={styles.label}>Session Rate (SOL) *</Text>
                 <TextInput
                   style={styles.input}
-                  value={hourlyRate}
-                  onChangeText={setHourlyRate}
+                  value={sessionRate}
+                  onChangeText={setsessionRate}
                   placeholder="0.05"
                   placeholderTextColor="#9ca3af"
                   keyboardType="decimal-pad"
@@ -262,36 +303,43 @@ const ExpertProfileManagementScreen: React.FC = () => {
               <View style={styles.profileSection}>
                 <View style={styles.profileField}>
                   <Text style={styles.fieldLabel}>Specialization</Text>
-                  <Text style={styles.fieldValue}>{currentUserProfile.specialization}</Text>
+                  <Text style={styles.fieldValue}>{currentUserProfile?.specialization}</Text>
                 </View>
 
                 <View style={styles.profileField}>
                   <Text style={styles.fieldLabel}>Bio</Text>
-                  <Text style={styles.fieldValue}>{currentUserProfile.bio || 'No bio provided'}</Text>
+                  <Text style={styles.fieldValue}>{currentUserProfile?.bio || 'No bio provided'}</Text>
                 </View>
 
                 <View style={styles.profileField}>
-                  <Text style={styles.fieldLabel}>Hourly Rate</Text>
-                  <Text style={styles.fieldValue}>{currentUserProfile.hourlyRate} SOL</Text>
+                  <Text style={styles.fieldLabel}>Session Rate</Text>
+                  <Text style={styles.fieldValue}>
+                    {(currentUserProfile?.sessionRate || (currentUserProfile as any)?.hourlyRate || 0)} SOL
+                  </Text>
                 </View>
 
                 <View style={styles.profileField}>
                   <Text style={styles.fieldLabel}>Status</Text>
-                  <Text style={[styles.fieldValue, { color: currentUserProfile.isOnline ? '#10b981' : '#ef4444' }]}>
-                    {currentUserProfile.isOnline ? 'Online' : 'Offline'}
+                  <Text style={[styles.fieldValue, { color: currentUserProfile?.isOnline ? '#10b981' : '#ef4444' }]}>
+                    {currentUserProfile?.isOnline ? 'Online' : 'Offline'}
                   </Text>
                 </View>
               </View>
             </>
           )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#fefefe',
+  },
+  contentContainer: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },
@@ -360,16 +408,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  header: {
+  editButtonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
     marginBottom: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1e293b',
   },
   editButton: {
     backgroundColor: '#6366f1',

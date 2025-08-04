@@ -1,11 +1,11 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import {
-  fetchCurrentUserProfile,
   createCurrentUserProfile,
-  updateCurrentUserProfile,
-  toggleCurrentUserOnlineStatus,
-  fetchExperts,
+  fetchCurrentUserProfile,
   fetchExpertById,
+  fetchExperts,
+  toggleCurrentUserOnlineStatus,
+  updateCurrentUserProfile,
 } from '../thunks/expertThunks'
 
 export interface Expert {
@@ -13,7 +13,7 @@ export interface Expert {
   userId: string
   specialization: string
   bio: string | null
-  hourlyRate: number
+  sessionRate: number
   rating: number
   totalConsultations: number
   isVerified: boolean

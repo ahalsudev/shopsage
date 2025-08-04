@@ -31,7 +31,7 @@ export type ShopsageExpert = {
           type: 'string'
         },
         {
-          name: 'hourlyRate'
+          name: 'sessionRate'
           type: 'u64'
         },
       ]
@@ -98,7 +98,7 @@ export type ShopsageExpert = {
             type: 'string'
           },
           {
-            name: 'hourlyRate'
+            name: 'sessionRate'
             type: 'u64'
           },
           {
@@ -172,7 +172,7 @@ export const IDL: ShopsageExpert = {
           type: 'string',
         },
         {
-          name: 'hourlyRate',
+          name: 'sessionRate',
           type: 'u64',
         },
       ],
@@ -239,7 +239,7 @@ export const IDL: ShopsageExpert = {
             type: 'string',
           },
           {
-            name: 'hourlyRate',
+            name: 'sessionRate',
             type: 'u64',
           },
           {

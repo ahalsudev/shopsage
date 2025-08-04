@@ -1,5 +1,6 @@
 import { RootState } from '@/store'
 import { fetchExpertsFailure, fetchExpertsStart, fetchExpertsSuccess } from '@/store/slices/expertSlice'
+import { GradientHeader } from '@/components/common/GradientHeader'
 import { useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import {
@@ -32,47 +33,12 @@ const ExpertListScreen: React.FC = () => {
   const loadExperts = async () => {
     dispatch(fetchExpertsStart())
     try {
-      // Mock data for now - replace with actual API call
-      const mockExperts = [
-        {
-          id: '1',
-          userId: '1',
-          name: 'Dr. Sarah Johnson',
-          specialization: 'Fashion & Style',
-          bio: 'Professional fashion consultant with 10+ years experience',
-          hourlyRate: 0.01,
-          rating: 4.8,
-          totalConsultations: 156,
-          isVerified: true,
-          isOnline: true,
-        },
-        {
-          id: '2',
-          userId: '2',
-          name: 'Mike Chen',
-          specialization: 'Tech & Gadgets',
-          bio: 'Tech expert helping you make informed purchase decisions',
-          hourlyRate: 0.01,
-          rating: 4.6,
-          totalConsultations: 89,
-          isVerified: true,
-          isOnline: false,
-        },
-        {
-          id: '3',
-          userId: '3',
-          name: 'Emma Davis',
-          specialization: 'Home & Garden',
-          bio: 'Interior design and home improvement specialist',
-          hourlyRate: 0.01,
-          rating: 4.9,
-          totalConsultations: 203,
-          isVerified: true,
-          isOnline: true,
-        },
-      ]
-      dispatch(fetchExpertsSuccess(mockExperts))
-    } catch {
+      const { expertService } = await import('@/services/expertService')
+      const expertsData = await expertService.getExperts()
+      console.log('Loaded experts from backend:', expertsData)
+      dispatch(fetchExpertsSuccess(expertsData))
+    } catch (error) {
+      console.error('Failed to load experts:', error)
       dispatch(fetchExpertsFailure('Failed to load experts'))
     }
   }
@@ -92,7 +58,7 @@ const ExpertListScreen: React.FC = () => {
     name: string
     specialization: string
     bio: string
-    hourlyRate: number
+    sessionRate: number
     rating: number
     totalConsultations: number
     isVerified: boolean
@@ -126,7 +92,7 @@ const ExpertListScreen: React.FC = () => {
           <Text style={styles.consultations}>({item.totalConsultations} sessions)</Text>
         </View>
         <View style={styles.priceContainer}>
-          <Text style={styles.price}>{item.hourlyRate} SOL</Text>
+          <Text style={styles.price}>{item.sessionRate} SOL</Text>
           <Text style={styles.priceLabel}>per session</Text>
         </View>
       </View>
@@ -135,17 +101,28 @@ const ExpertListScreen: React.FC = () => {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text style={styles.loadingText}>Loading experts...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <GradientHeader 
+          title="Find Experts"
+          subtitle="Connect with verified shopping experts"
+        />
+        <SafeAreaView style={styles.contentContainer}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366f1" />
+            <Text style={styles.loadingText}>Loading experts...</Text>
+          </View>
+        </SafeAreaView>
+      </View>
     )
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <GradientHeader 
+        title="Find Experts"
+        subtitle="Connect with verified shopping experts"
+      />
+      <SafeAreaView style={styles.contentContainer}>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -171,12 +148,17 @@ const ExpertListScreen: React.FC = () => {
           <Text style={styles.errorText}>{error}</Text>
         </View>
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#fefefe',
+  },
+  contentContainer: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },

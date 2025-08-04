@@ -1,15 +1,15 @@
 export interface UserProfile {
-  id: string
-  walletAddress: string
-  name: string
-  email: string
-  createdAt: string
-  updatedAt: string
+  id?: string
+  walletAddress?: string
+  name?: string
+  email?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface UserRoles {
-  canShop: boolean      // has shopper profile
-  canExpert: boolean    // has expert profile  
+  canShop: boolean // has shopper profile
+  canExpert: boolean // has expert profile
   activeRole: 'shopper' | 'expert' | 'dual' | 'none'
 }
 
@@ -28,27 +28,20 @@ export interface ShopperProfile {
 
 export interface ExpertProfile {
   id: string
+  userId: string
   specialization: string
-  bio: string
-  hourlyRate: number
+  bio: string | null
+  sessionRate: number
   rating: number
   totalConsultations: number
   isVerified: boolean
   isOnline: boolean
-  profileImageUrl?: string
+  profileImageUrl: string | null
+  createdAt?: string
+  updatedAt?: string
 }
-
-export interface CompleteUserProfile {
+export interface UserCompleteProfile {
   user: UserProfile
-  roles: UserRoles
-  shopperProfile?: ShopperProfile
-  expertProfile?: ExpertProfile
-}
-
-// Legacy User interface for backward compatibility during transition
-export interface User {
-  profile: UserProfile
-  roles?: UserRoles
   shopperProfile?: ShopperProfile
   expertProfile?: ExpertProfile
 }

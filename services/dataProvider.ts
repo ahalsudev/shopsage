@@ -4,30 +4,36 @@ import {
   SessionWithDetails,
   UpdateSessionRequest,
 } from '../services/sessionService';
-import { CompleteUserProfile, ExpertProfile, ShopperProfile, User, UserProfile } from '../types/auth';
-import { transformBackendUser } from '../utils/dataTransforms';
+import { ExpertProfile, ShopperProfile, UserCompleteProfile, UserProfile } from '../types/auth';
 
 export interface IDataProvider {
-  registerUser(walletAddress: string, name: string, email: string): Promise<{ user: User; token: string }>
-  loginUser(walletAddress: string): Promise<{ user: User; token: string }>
+  registerUser(walletAddress: string, name: string, email: string): Promise<{ user: UserCompleteProfile; token: string }>
+  loginUser(walletAddress: string): Promise<{ user: UserCompleteProfile; token: string }>
 
   // New Multi-Role Profile Management
-  getCompleteUserProfile(): Promise<CompleteUserProfile>
+  getUserCompleteProfile(): Promise<UserCompleteProfile>
   createShopperProfile(profileData: Partial<ShopperProfile>): Promise<ShopperProfile>
   getShopperProfile(): Promise<ShopperProfile>
   createExpertProfile(profileData: Partial<ExpertProfile>): Promise<ExpertProfile>
   getExpertProfile(): Promise<ExpertProfile>
-  
+
   // Legacy Profile Management (for backward compatibility)
   updateUserProfile(updates: Partial<UserProfile>): Promise<UserProfile>
   updateShopperProfile(updates: Partial<ShopperProfile>): Promise<ShopperProfile>
   updateExpertProfile(updates: Partial<ExpertProfile>): Promise<ExpertProfile>
+  
+  // Expert Status Management
+  updateExpertOnlineStatus(isOnline: boolean): Promise<ExpertProfile>
 
   // Sessions
   createSession(sessionData: CreateSessionRequest): Promise<SessionResponse>
   getSession(sessionId: string): Promise<SessionResponse>
   getUserSessions(): Promise<SessionWithDetails[]>
   updateSession(sessionId: string, updates: UpdateSessionRequest): Promise<SessionResponse>
+
+  // Payments
+  processPayment(paymentData: { sessionId: string; transactionHash: string }): Promise<any>
+  getPaymentHistory(): Promise<any[]>
 
   // Experts
   getExperts(): Promise<any[]>
@@ -37,7 +43,7 @@ export interface IDataProvider {
 
 // Remote API Data Provider Implementation
 class RemoteDataProvider implements IDataProvider {
-  async loginUser(walletAddress: string): Promise<{ user: User; token: string }> {
+  async loginUser(walletAddress: string): Promise<{ user: UserCompleteProfile; token: string }> {
     const jsonPayload = JSON.stringify({
       walletAddress: walletAddress.toString(),
     })
@@ -65,6 +71,7 @@ class RemoteDataProvider implements IDataProvider {
 
     // Get authentication token
     const token = await AsyncStorage.getItem('token')
+    console.log(`Making API call to ${endpoint}, token available:`, !!token)
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -73,21 +80,37 @@ class RemoteDataProvider implements IDataProvider {
 
     if (token) {
       headers.Authorization = `Bearer ${token}`
+      console.log('Authorization header added')
+    } else {
+      console.warn('No auth token available for API call to', endpoint)
     }
 
-    const response = await fetch(`${AppConfig.api.baseUrl}${endpoint}`, {
+    const url = `${AppConfig.api.baseUrl}${endpoint}`
+    console.log(`Calling: ${options.method || 'GET'} ${url}`)
+
+    const response = await fetch(url, {
       ...options,
       headers,
     })
 
+    console.log(`Response: ${response.status} ${response.statusText}`)
+
     if (!response.ok) {
-      return response.status
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`
+      try {
+        const errorData = await response.json()
+        console.log('Error response body:', errorData)
+        errorMessage = errorData.error || errorData.message || errorMessage
+      } catch {
+        // If response body isn't JSON, use default message
+      }
+      throw new Error(errorMessage)
     }
 
     return response.json()
   }
 
-  async registerUser(walletAddress: string, name: string, email: string): Promise<{ user: User; token: string }> {
+  async registerUser(walletAddress: string, name: string, email: string): Promise<{ user: UserCompleteProfile; token: string }> {
     const jsonPayload = JSON.stringify({
       walletAddress,
       name,
@@ -106,45 +129,48 @@ class RemoteDataProvider implements IDataProvider {
     if (response.token) {
       await AsyncStorage.setItem('token', response.token)
     }
-
-    // Transform flat user object to our User structure
-    if (response.user) {
-      const user = transformBackendUser(response.user)
-      return { ...response, user }
-    }
-
+    
     return response
   }
 
-  async getUser(): Promise<User> {
+  async getUser(): Promise<UserCompleteProfile> {
     return this.makeApiCall('/auth/login')
   }
 
-  async getCompleteUserProfile(): Promise<CompleteUserProfile> {
-    return this.makeApiCall('/api/profiles/complete')
+  async getUserCompleteProfile(): Promise<UserCompleteProfile> {
+    return this.makeApiCall('/profiles/complete')
   }
 
   // New Multi-Role Profile Management
   async createShopperProfile(profileData: Partial<ShopperProfile>): Promise<ShopperProfile> {
-    return this.makeApiCall('/api/profiles/shopper', {
+    return this.makeApiCall('/profiles/shopper', {
       method: 'POST',
       body: JSON.stringify(profileData),
     })
   }
 
   async getShopperProfile(): Promise<ShopperProfile> {
-    return this.makeApiCall('/api/profiles/shopper')
+    return this.makeApiCall('/profiles/shopper')
   }
 
   async createExpertProfile(profileData: Partial<ExpertProfile>): Promise<ExpertProfile> {
-    return this.makeApiCall('/api/profiles/expert', {
+    // Handle backward compatibility: send both sessionRate and hourlyRate
+    const payload = {
+      ...profileData,
+      // If sessionRate exists, also send it as hourlyRate for backend compatibility
+      ...(profileData.sessionRate && { hourlyRate: profileData.sessionRate }),
+    }
+    
+    console.log('Creating expert profile with payload:', payload)
+    
+    return this.makeApiCall('/profiles/expert', {
       method: 'POST',
-      body: JSON.stringify(profileData),
+      body: JSON.stringify(payload),
     })
   }
 
   async getExpertProfile(): Promise<ExpertProfile> {
-    return this.makeApiCall('/api/profiles/expert')
+    return this.makeApiCall('/profiles/expert')
   }
 
   // Legacy Profile Management (for backward compatibility)
@@ -157,16 +183,23 @@ class RemoteDataProvider implements IDataProvider {
   }
 
   async updateShopperProfile(updates: Partial<ShopperProfile>): Promise<ShopperProfile> {
-    return this.makeApiCall('/api/profiles/shopper', {
+    return this.makeApiCall('/profiles/shopper', {
       method: 'PUT',
       body: JSON.stringify(updates),
     })
   }
 
   async updateExpertProfile(updates: Partial<ExpertProfile>): Promise<ExpertProfile> {
-    return this.makeApiCall('/api/profiles/expert', {
+    return this.makeApiCall('/profiles/expert', {
       method: 'PUT',
       body: JSON.stringify(updates),
+    })
+  }
+
+  async updateExpertOnlineStatus(isOnline: boolean): Promise<ExpertProfile> {
+    return this.makeApiCall('/profiles/expert', {
+      method: 'PUT',
+      body: JSON.stringify({ isOnline }),
     })
   }
 
@@ -175,7 +208,7 @@ class RemoteDataProvider implements IDataProvider {
       method: 'POST',
       body: JSON.stringify({
         expert_id: sessionData.expertId,
-        start_time: sessionData.startTime,
+        // start_time: sessionData.startTime,
         amount: sessionData.amount,
       }),
     })
@@ -203,8 +236,23 @@ class RemoteDataProvider implements IDataProvider {
     })
   }
 
+  async processPayment(paymentData: { sessionId: string; transactionHash: string }): Promise<any> {
+    return this.makeApiCall('/payments/process', {
+      method: 'POST',
+      body: JSON.stringify({
+        session_id: paymentData.sessionId,
+        transaction_hash: paymentData.transactionHash,
+      }),
+    })
+  }
+
+  async getPaymentHistory(): Promise<any[]> {
+    const response = await this.makeApiCall('/payments/history')
+    return response.payments || response
+  }
+
   async getExperts(): Promise<any[]> {
-    return this.makeApiCall('/experts')
+    return this.makeApiCall('/experts/list')
   }
 
   async getExpertById(expertId: string): Promise<any> {
@@ -216,7 +264,7 @@ class RemoteDataProvider implements IDataProvider {
     if (filters?.specialization) params.append('specialization', filters.specialization)
     if (filters?.isOnline !== undefined) params.append('isOnline', filters.isOnline.toString())
     if (filters?.minRating) params.append('minRating', filters.minRating.toString())
-    if (filters?.maxHourlyRate) params.append('maxHourlyRate', filters.maxHourlyRate.toString())
+    if (filters?.maxSessionRate) params.append('maxSessionRate', filters.maxSessionRate.toString())
 
     return this.makeApiCall(`/experts/search?${params.toString()}`)
   }

@@ -18,21 +18,21 @@ export default function ConnectWalletScreen() {
       let account = await signIn()
       const walletAddress = account.publicKey.toString()
 
-      if (existingUserData && existingUserData.profile.walletAddress === walletAddress) {
+      if (existingUserData && existingUserData.user.walletAddress === walletAddress) {
         // User has local data for this wallet - just login with backend and redirect
         console.log('Found existing user data locally, logging in...')
         try {
           const loginResponse = await authService.loginUser(walletAddress)
           if (loginResponse !== 404) {
             // Update local data with any backend changes
-            await updateUser({ profile: loginResponse.user.profile })
-            router.push('/(profile)/home')
+            await updateUser(loginResponse.user)
+            router.push('/(tabs)/explore')
             return
           }
         } catch (error) {
           console.log('Backend login failed, using local data:', error)
           // Fallback to local data if backend fails
-          router.push('/(profile)/home')
+          router.push('/(tabs)/explore')
           return
         }
       }
@@ -46,10 +46,21 @@ export default function ConnectWalletScreen() {
         console.log('User not found, redirecting to registration...')
         router.push('/complete-profile')
       } else {
-        // User exists in backend - save their data and redirect to profile
+        // User exists in backend - save their data and redirect
         console.log('User found in backend, logging in...')
-        await updateUser({ profile: loginResponse.user.profile })
-        router.push('/(profile)/home')
+        await updateUser(loginResponse.user)
+        
+        // Check if user has profiles to decide where to redirect
+        const hasShopperProfile = loginResponse.user.shopperProfile
+        const hasExpertProfile = loginResponse.user.expertProfile
+        
+        if (!hasShopperProfile && !hasExpertProfile) {
+          // User exists but has no profiles - redirect to complete profile
+          router.push('/complete-profile')
+        } else {
+          // User has at least one profile - redirect to main app
+          router.push('/(tabs)/explore')
+        }
       }
     } catch (error) {
       Alert.alert('Connection Failed', error instanceof Error ? error.message : 'Failed to connect wallet')

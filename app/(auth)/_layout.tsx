@@ -4,18 +4,10 @@ export default function AuthLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: '#ffffff',
-        },
-        headerTintColor: '#6366f1',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          color: '#1e293b',
-        },
+        headerShown: false,
       }}
     >
-      <Stack.Screen name="connect-wallet" options={{ title: 'Connect Wallet' }} />
+      <Stack.Screen name="connect-wallet" />
     </Stack>
   )
 }

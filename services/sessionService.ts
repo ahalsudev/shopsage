@@ -1,28 +1,8 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import axios from 'axios'
 import { v4 as uuidv4 } from 'react-native-uuid'
-import { AppConfig, log } from '../config/environment'
+import { log } from '../config/environment'
 import { dataProvider } from './dataProvider'
 import { paymentService } from './paymentService'
-import { videoCallService, VideoCallCredentials } from './videoCallService'
-
-const API_BASE_URL = AppConfig.api.baseUrl
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// Add token to requests if available
-api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+import { VideoCallCredentials, videoCallService } from './videoCallService'
 
 export interface CreateSessionRequest {
   expertId: string
@@ -76,9 +56,6 @@ export const sessionService = {
       return await dataProvider.createSession(sessionData)
     } catch (error) {
       log.error('Failed to create session:', error)
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to create session')
-      }
       throw error
     }
   },
@@ -89,9 +66,6 @@ export const sessionService = {
       return await dataProvider.getSession(sessionId)
     } catch (error) {
       log.error('Failed to get session:', error)
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get session')
-      }
       throw error
     }
   },
@@ -102,9 +76,6 @@ export const sessionService = {
       return await dataProvider.getUserSessions()
     } catch (error) {
       log.error('Failed to get user sessions:', error)
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get sessions')
-      }
       throw error
     }
   },
@@ -115,9 +86,6 @@ export const sessionService = {
       return await dataProvider.updateSession(sessionId, updates)
     } catch (error) {
       log.error('Failed to update session:', error)
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to update session')
-      }
       throw error
     }
   },
@@ -126,9 +94,6 @@ export const sessionService = {
     try {
       return await this.updateSession(sessionId, { status: 'cancelled' })
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to cancel session')
-      }
       throw error
     }
   },
@@ -140,9 +105,6 @@ export const sessionService = {
         endTime: new Date().toISOString(),
       })
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to complete session')
-      }
       throw error
     }
   },
@@ -151,9 +113,6 @@ export const sessionService = {
     try {
       return await this.updateSession(sessionId, { status: 'active' })
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to start session')
-      }
       throw error
     }
   },
@@ -163,9 +122,6 @@ export const sessionService = {
       const sessions = await this.getUserSessions()
       return sessions.filter((session) => session.status === 'active')
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get active sessions')
-      }
       throw error
     }
   },
@@ -175,9 +131,6 @@ export const sessionService = {
       const sessions = await this.getUserSessions()
       return sessions.filter((session) => session.status === 'pending' && new Date(session.startTime) > new Date())
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get upcoming sessions')
-      }
       throw error
     }
   },
@@ -187,9 +140,6 @@ export const sessionService = {
       const sessions = await this.getUserSessions()
       return sessions.filter((session) => session.status === 'completed' || session.status === 'cancelled')
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get past sessions')
-      }
       throw error
     }
   },
@@ -360,18 +310,18 @@ export const sessionService = {
   async startVideoCall(sessionId: string, participantIds: string[]): Promise<VideoCallCredentials> {
     try {
       log.info('SessionService: Starting video call for session', { sessionId, participantIds })
-      
+
       // Start the video call
       const credentials = await videoCallService.startVideoCall({
         sessionId,
         participantIds,
-        callType: 'video'
+        callType: 'video',
       })
 
       // Update session with video call information
       try {
-        await this.updateSession(sessionId, { 
-          status: 'active'
+        await this.updateSession(sessionId, {
+          status: 'active',
         })
       } catch (updateError) {
         log.warn('Failed to update session status after starting video call:', updateError)
@@ -387,7 +337,7 @@ export const sessionService = {
   async joinVideoCall(sessionId: string, userId: string): Promise<VideoCallCredentials> {
     try {
       log.info('SessionService: Joining video call for session', { sessionId, userId })
-      
+
       // Get session to retrieve call ID
       const session = await this.getSessionHybrid(sessionId)
       if (!session) {
@@ -408,7 +358,7 @@ export const sessionService = {
   async endVideoCall(sessionId: string): Promise<void> {
     try {
       log.info('SessionService: Ending video call for session', { sessionId })
-      
+
       // Get session to retrieve call ID
       const session = await this.getSessionHybrid(sessionId)
       if (!session?.videoCallId) {

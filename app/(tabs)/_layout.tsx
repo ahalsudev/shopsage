@@ -1,17 +1,26 @@
+import { UiIconSymbol } from '@/components/ui/ui-icon-symbol'
 import { Tabs } from 'expo-router'
 import React from 'react'
-import { UiIconSymbol } from '@/components/ui/ui-icon-symbol'
 
 export default function TabLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: false }}>
-      {/* The index redirects to the account screen */}
+    <Tabs screenOptions={{ 
+      headerShown: false, 
+      tabBarActiveTintColor: '#3b82f6', 
+      tabBarInactiveTintColor: '#60a5fa',
+      tabBarStyle: {
+        backgroundColor: '#fefefe',
+        borderTopColor: '#f8fafc',
+        borderTopWidth: 0,
+      }
+    }}>
+      {/* The index redirects to the explore screen */}
       <Tabs.Screen name="index" options={{ tabBarItemStyle: { display: 'none' } }} />
       <Tabs.Screen
-        name="account"
+        name="explore"
         options={{
-          title: 'Account',
-          tabBarIcon: ({ color }) => <UiIconSymbol size={28} name="wallet.pass.fill" color={color} />,
+          title: 'Explore',
+          tabBarIcon: ({ color }) => <UiIconSymbol size={28} name="magnifyingglass" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -19,13 +28,6 @@ export default function TabLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color }) => <UiIconSymbol size={28} name="gearshape.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="demo"
-        options={{
-          title: 'Demo',
-          tabBarIcon: ({ color }) => <UiIconSymbol size={28} name="ladybug.fill" color={color} />,
         }}
       />
     </Tabs>

@@ -1,26 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import axios from 'axios'
-import { AppConfig, log } from '../config/environment'
-import { CompleteUserProfile, ExpertProfile, ShopperProfile, User, UserProfile } from '../types/auth'
+import { log } from '../config/environment'
+import { ExpertProfile, ShopperProfile, UserCompleteProfile, UserProfile } from '../types/auth'
 import { dataProvider } from './dataProvider'
-
-const API_BASE_URL = AppConfig.api.baseUrl
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// Add token to requests if available
-api.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
 
 const STORAGE_KEYS = {
   USER_PROFILE: 'user_profile',
@@ -48,7 +29,7 @@ export interface RegisterUserRequest {
 export interface CreateExpertProfileRequest {
   specialization: string
   bio: string
-  hourlyRate: number
+  sessionRate: number
   availability: {
     schedule: { [key: string]: { start: string; end: string; available: boolean } }
     timezone: string
@@ -63,40 +44,41 @@ export const userService = {
   async loadWalletAddressLocally(): Promise<string | null> {
     return await AsyncStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS)
   },
-  async saveUserDataLocally(user: User): Promise<void> {
+  async saveUserDataLocally(user: UserCompleteProfile): Promise<void> {
+    
     try {
       if (!user) {
         throw new Error('User is null or undefined')
       }
 
-      if (!user.profile) {
+      if (!user.user) {
         throw new Error('User profile is null or undefined')
       }
 
       // Validate profile fields
-      if (!user.profile.id) {
+      if (!user.user.id) {
         throw new Error('User profile.id is null or undefined')
       }
 
-      if (!user.profile.walletAddress) {
+      if (!user.user.walletAddress) {
         throw new Error('User profile.walletAddress is null or undefined')
       }
 
-      if (!user.profile.name) {
+      if (!user.user.name) {
         throw new Error('User profile.name is null or undefined')
       }
 
       log.info('Saving user data:', {
-        walletAddress: user.profile.walletAddress,
-        name: user.profile.name,
+        walletAddress: user.user.walletAddress,
+        name: user.user.name,
         hasShopperProfile: !!user.shopperProfile,
         hasExpertProfile: !!user.expertProfile,
       })
 
       const operations = [
-        AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(user.profile)),
+        AsyncStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(user.user)),
         AsyncStorage.setItem(STORAGE_KEYS.LAST_SYNC, Date.now().toString()),
-        AsyncStorage.setItem(STORAGE_KEYS.WALLET_ADDRESS, user.profile.walletAddress),
+        AsyncStorage.setItem(STORAGE_KEYS.WALLET_ADDRESS, user.user.walletAddress),
       ]
 
       // Handle shopper profile
@@ -121,7 +103,7 @@ export const userService = {
     }
   },
 
-  async loadUserDataLocally(): Promise<User | null> {
+  async loadUserDataLocally(): Promise<UserCompleteProfile | null> {
     try {
       const [profileData, shopperData, expertData, lastSync, walletAddress] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.USER_PROFILE),
@@ -140,8 +122,8 @@ export const userService = {
       const shopperProfile: ShopperProfile | undefined = shopperData ? JSON.parse(shopperData) : undefined
       const expertProfile: ExpertProfile | undefined = expertData ? JSON.parse(expertData) : undefined
 
-      const user: User = {
-        profile,
+      const user: UserCompleteProfile = {
+        user: profile,
         shopperProfile,
         expertProfile,
       }
@@ -216,15 +198,12 @@ export const userService = {
   },
 
   // New Multi-Role API calls
-  async getCompleteUserProfile(): Promise<CompleteUserProfile> {
+  async getUserCompleteProfile(): Promise<UserCompleteProfile> {
     try {
       log.info('UserService: Getting complete user profile')
-      return await dataProvider.getCompleteUserProfile()
+      return await dataProvider.getUserCompleteProfile()
     } catch (error) {
       log.error('Failed to get complete user profile:', error)
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to get user profile')
-      }
       throw error
     }
   },
@@ -238,9 +217,6 @@ export const userService = {
       return await dataProvider.updateUserProfile(updates)
     } catch (error) {
       log.error('Failed to update user profile:', error)
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to update profile')
-      }
       throw error
     }
   },
@@ -251,9 +227,6 @@ export const userService = {
       return await dataProvider.createShopperProfile(profileData)
     } catch (error) {
       log.error('Failed to create shopper profile:', error)
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to create shopper profile')
-      }
       throw error
     }
   },
@@ -264,9 +237,6 @@ export const userService = {
       return await dataProvider.updateShopperProfile(updates)
     } catch (error) {
       log.error('Failed to update shopper profile:', error)
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to update shopper profile')
-      }
       throw error
     }
   },
@@ -277,9 +247,6 @@ export const userService = {
       return await dataProvider.createExpertProfile(profileData)
     } catch (error) {
       log.error('Failed to create expert profile:', error)
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to create expert profile')
-      }
       throw error
     }
   },
@@ -290,18 +257,15 @@ export const userService = {
       return await dataProvider.updateExpertProfile(updates)
     } catch (error) {
       log.error('Failed to update expert profile:', error)
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.error || 'Failed to update expert profile')
-      }
       throw error
     }
   },
 
   // Hybrid methods that sync with both local and backend
-  async syncUserData(): Promise<User | null> {
+  async syncUserData(): Promise<UserCompleteProfile | null> {
     try {
       // Try to get fresh data from backend
-      const backendUser = await this.getCompleteUserProfile()
+      const backendUser = await this.getUserCompleteProfile()
 
       // Save to local storage
       await this.saveUserDataLocally(backendUser)

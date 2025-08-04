@@ -4,19 +4,13 @@ export default function ExpertLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
-        headerStyle: {
-          backgroundColor: '#ffffff',
-        },
-        headerTintColor: '#6366f1',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-          color: '#1e293b',
-        },
+        headerShown: false,
       }}
     >
-      <Stack.Screen name="list" options={{ title: 'Find Experts' }} />
-      <Stack.Screen name="detail" options={{ title: 'Expert Details' }} />
+      <Stack.Screen name="list" />
+      <Stack.Screen name="detail" />
+      <Stack.Screen name="registration" />
+      <Stack.Screen name="profile-management" />
     </Stack>
   )
 }

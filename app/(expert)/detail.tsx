@@ -1,83 +1,201 @@
 import { useCustomAlert } from '@/components/CustomAlert'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import React from 'react'
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native'
-import { videoCallNavigation } from '@/utils/videoCallNavigation'
 import { useAuth } from '@/components/auth/auth-provider'
+import { GradientHeader } from '@/components/common/GradientHeader'
+import { videoCallNavigation } from '@/utils/videoCallNavigation'
+import { useLocalSearchParams, useRouter } from 'expo-router'
+import React, { useEffect, useState } from 'react'
+import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+
+interface Expert {
+  id: string
+  name: string
+  specialization: string
+  bio: string
+  sessionRate: number
+  rating: number
+  totalConsultations: number
+  isVerified: boolean
+  isOnline: boolean
+  avatar?: string
+  bgColor?: string
+}
 
 const ExpertDetailScreen: React.FC = () => {
   const { expertId } = useLocalSearchParams()
   const router = useRouter()
   const { showAlert, AlertComponent } = useCustomAlert()
   const { user } = useAuth()
+  const [expert, setExpert] = useState<Expert | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Mock expert data - replace with actual data fetching
-  const expert = {
-    id: expertId,
-    name: 'Dr. Sarah Johnson',
-    specialization: 'Fashion & Style',
-    bio: 'Professional fashion consultant with over 10 years of experience helping clients find their perfect style. Specializing in wardrobe optimization, shopping strategies, and personal branding.',
-    hourlyRate: 0.01,
-    rating: 4.8,
-    totalConsultations: 156,
-    isVerified: true,
-    isOnline: true,
-    profileImageUrl: null,
+  useEffect(() => {
+    loadExpert()
+  }, [expertId])
+
+  const loadExpert = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const { expertService } = await import('@/services/expertService')
+      const expertData = await expertService.getExpertById(expertId as string)
+      
+      console.log('Loaded expert data:', expertData)
+      
+      if (!expertData) {
+        throw new Error('Expert not found')
+      }
+
+      // Transform backend data to match our interface
+      const transformedExpert: Expert = {
+        id: expertData.id || expertData.userId,
+        name: expertData.name || 'Unknown Expert',
+        specialization: expertData.specialization || 'General',
+        bio: expertData.bio || 'No bio available',
+        sessionRate: expertData.sessionRate || 0.01,
+        rating: expertData.rating || 4.0,
+        totalConsultations: expertData.totalConsultations || 0,
+        isVerified: expertData.isVerified || false,
+        isOnline: expertData.isOnline || false,
+        avatar: '👨‍💼', // Default avatar
+        bgColor: '#6366f1' // Default color
+      }
+      
+      setExpert(transformedExpert)
+    } catch (error) {
+      console.error('Failed to load expert:', error)
+      setError('Failed to load expert details')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleBookConsultation = async () => {
-    showAlert(
-      'Book Consultation', 
-      `Book a 5-minute consultation with ${expert.name} for ${expert.hourlyRate} SOL?`, 
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Start Video Call',
-          onPress: async () => {
-            try {
-              if (!user?.profile?.id) {
-                Alert.alert('Error', 'Please log in to book a consultation');
-                return;
-              }
-
-              // Check if video calling is available
-              const isAvailable = await videoCallNavigation.isVideoCallAvailable();
-              if (!isAvailable) {
-                Alert.alert(
-                  'Video Call Unavailable', 
-                  'Video calling is not configured. Please check your settings.'
-                );
-                return;
-              }
-
-              // Generate a session ID for this consultation
-              const sessionId = `session_${user.profile.id}_${expertId}_${Date.now()}`;
-
-              // Start video call directly (this creates the session)
-              await videoCallNavigation.startVideoCall({
-                sessionId,
-                userId: user.profile.id,
-                participantIds: [user.profile.id, expertId as string],
-              });
-
-            } catch (error) {
-              console.error('Failed to start video call:', error);
-              Alert.alert('Error', 'Failed to start video call. Please try again.');
+    if (!expert) return
+    
+    showAlert('Book Consultation', `Book a 5-minute consultation with ${expert.name} for ${expert.sessionRate} SOL?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Start Video Call',
+        onPress: async () => {
+          try {
+            if (!user?.user?.id) {
+              Alert.alert('Error', 'Please log in to book a consultation')
+              return
             }
-          },
+
+            // Check if we have authentication token
+            const AsyncStorage = await import('@react-native-async-storage/async-storage').then((m) => m.default)
+            const token = await AsyncStorage.getItem('token')
+            console.log('Auth token available:', !!token)
+            
+            if (!token) {
+              Alert.alert(
+                'Authentication Required', 
+                'You need to log in to book a consultation. Would you like to log in now?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { 
+                    text: 'Log In', 
+                    onPress: () => router.push('/(auth)/connect-wallet')
+                  }
+                ]
+              )
+              return
+            }
+
+            // Check if video calling is available
+            const isAvailable = await videoCallNavigation.isVideoCallAvailable()
+            if (!isAvailable) {
+              Alert.alert('Video Call Unavailable', 'Video calling is not configured. Please check your settings.')
+              return
+            }
+
+            // First create a session in the backend
+            const { sessionService } = await import('@/services/sessionService')
+            
+            const sessionData = {
+              expertId: expertId as string,
+              startTime: new Date().toISOString(),
+              amount: expert.sessionRate.toString()
+            }
+            
+            console.log('Creating session with data:', sessionData)
+            console.log('User data:', user.user)
+            const session = await sessionService.createSession(sessionData)
+            console.log('Created session:', session)
+
+            // Now start video call with the created session
+            await videoCallNavigation.startVideoCall({
+              sessionId: session.id,
+              userId: user.user.id,
+              participantIds: [user.user.id, expertId as string],
+            })
+          } catch (error) {
+            console.error('Failed to start video call:', error)
+            const errorMessage = error instanceof Error ? error.message : 'Failed to start video call. Please try again.'
+            Alert.alert('Error', errorMessage)
+          }
         },
-      ]
-    );
+      },
+    ])
+  }
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <GradientHeader 
+          title="Loading Expert..."
+          subtitle="Please wait"
+        />
+        <SafeAreaView style={styles.contentContainer}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366f1" />
+            <Text style={styles.loadingText}>Loading expert details...</Text>
+          </View>
+        </SafeAreaView>
+      </View>
+    )
+  }
+
+  if (error || !expert) {
+    return (
+      <View style={styles.container}>
+        <GradientHeader 
+          title="Expert Not Found"
+          subtitle="Unable to load expert details"
+        />
+        <SafeAreaView style={styles.contentContainer}>
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorIcon}>⚠️</Text>
+            <Text style={styles.errorTitle}>Expert Not Found</Text>
+            <Text style={styles.errorText}>{error || 'This expert could not be found.'}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={loadExpert}>
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
+    )
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        {/* Expert Header */}
-        <View style={styles.header}>
+    <View style={styles.container}>
+      <GradientHeader 
+        title={expert.name}
+        subtitle={`${expert.specialization} Expert`}
+      />
+      <SafeAreaView style={styles.contentContainer}>
+        <ScrollView style={styles.scrollView}>
+          {/* Expert Header */}
+          <View style={styles.header}>
           <View style={styles.profileSection}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{expert.name.charAt(0)}</Text>
+            <View style={[styles.avatar, { backgroundColor: expert.bgColor }]}>
+              <Text style={styles.avatarText}>{expert.avatar}</Text>
             </View>
             <View style={styles.profileInfo}>
               <Text style={styles.expertName}>{expert.name}</Text>
@@ -101,7 +219,7 @@ const ExpertDetailScreen: React.FC = () => {
             <Text style={styles.statLabel}>Sessions</Text>
           </View>
           <View style={styles.stat}>
-            <Text style={styles.statNumber}>{expert.hourlyRate} SOL</Text>
+            <Text style={styles.statNumber}>{expert.sessionRate} SOL</Text>
             <Text style={styles.statLabel}>Per Session</Text>
           </View>
         </View>
@@ -122,7 +240,7 @@ const ExpertDetailScreen: React.FC = () => {
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Price:</Text>
-              <Text style={styles.infoValue}>{expert.hourlyRate} SOL</Text>
+              <Text style={styles.infoValue}>{expert.sessionRate} SOL</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Payment:</Text>
@@ -141,14 +259,19 @@ const ExpertDetailScreen: React.FC = () => {
             <Text style={styles.bookButtonText}>{expert.isOnline ? 'Book Consultation' : 'Currently Offline'}</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-      {AlertComponent}
-    </SafeAreaView>
+        </ScrollView>
+        {AlertComponent}
+      </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: '#fefefe',
+  },
+  contentContainer: {
     flex: 1,
     backgroundColor: '#f8fafc',
   },
@@ -176,8 +299,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    textAlign: 'center',
   },
   profileInfo: {
     flex: 1,
@@ -281,6 +403,65 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#64748b',
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1e293b',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#64748b',
+    marginBottom: 24,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  retryButton: {
+    backgroundColor: '#6366f1',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  backButton: {
+    backgroundColor: '#6b7280',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  backButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 })
 
