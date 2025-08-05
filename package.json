@@ -1,5 +1,5 @@
 {
-  "name": "shopsage-solana",
+  "name": "shopsage-programs",
   "version": "1.0.0",
   "description": "Solana programs for ShopSage platform",
   "scripts": {
