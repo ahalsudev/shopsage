@@ -6,6 +6,9 @@ import { createContext, type PropsWithChildren, use, useCallback, useEffect, use
 import { log } from '../../config/environment'
 import { userService } from '../../services/userService'
 import { UserCompleteProfile } from '../../types/auth'
+import { authStateManager } from '../../utils/authStateManager'
+
+import { expertProgramService } from '@/services/expertProgramService';
 
 export interface AuthState {
   isAuthenticated: boolean
@@ -17,6 +20,8 @@ export interface AuthState {
   updateUser: (updates: Partial<UserCompleteProfile>) => Promise<void>
   enableRole: (role: 'shopper' | 'expert', profileData: any) => Promise<void>
   syncUserData: () => Promise<void>
+  refreshRegistrationState: () => Promise<void>
+  refreshExpertProfile: () => Promise<void>
 }
 
 const Context = createContext<AuthState>({} as AuthState)
@@ -35,7 +40,7 @@ function useSignInMutation(onSignInSuccess?: (walletAddress: string) => void) {
 
   return useMutation({
     mutationFn: async () => {
-      console.log('Starting signIn with payload:', {
+      console.log('[AuthProvider] Starting signIn with payload:', {
         uri: AppConfig.uri,
         domain: 'shopsage.site',
       })
@@ -48,9 +53,17 @@ function useSignInMutation(onSignInSuccess?: (walletAddress: string) => void) {
         nonce: Math.random().toString(36).substring(2, 15),
       })
 
+      console.log('[AuthProvider] SignIn completed:', result ? 'Success' : 'Failed')
+      console.log('[AuthProvider] Result details:', {
+        hasResult: !!result,
+        hasPublicKey: !!result?.publicKey,
+        publicKey: result?.publicKey?.toString()
+      })
+
       // Call success callback if provided
       if (onSignInSuccess && result) {
         let address = result.publicKey.toString()
+        console.log('[AuthProvider] Calling onSignInSuccess with address:', address)
         onSignInSuccess(address)
       }
 
@@ -65,13 +78,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [profile, setProfile] = useState<UserCompleteProfile | null>(null)
   const [authLoading, setAuthLoading] = useState(false)
   const [hasValidToken, setHasValidToken] = useState(false)
+  const [isInRegistrationFlow, setIsInRegistrationFlow] = useState(false)
 
   // Initialize user on first sign in
   const onSignInSuccess = useCallback(async (walletAddress: string) => {
     setAuthLoading(true)
+    console.log('[AuthProvider] onSignInSuccess called with:', walletAddress)
     await userService.saveWalletAddressLocally(walletAddress)
+    
+    // Force a small delay to ensure authorization state is updated
+    setTimeout(() => {
+      console.log('[AuthProvider] Checking auth state after sign-in:', {
+        accountsLength: accounts?.length ?? 0,
+        hasValidToken,
+        isInRegistrationFlow,
+        hasProfile: profile !== null
+      })
+    }, 1000)
+    
     setAuthLoading(false)
-  }, [])
+  }, [accounts, hasValidToken, isInRegistrationFlow, profile])
 
   const signInMutation = useSignInMutation(onSignInSuccess)
 
@@ -81,6 +107,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // Check if we have a valid auth token
         const AsyncStorage = await import('@react-native-async-storage/async-storage').then((m) => m.default)
         const token = await AsyncStorage.getItem('token')
+        
+        // Check if user is in registration flow
+        const inRegistrationFlow = await authStateManager.isInRegistrationFlow()
+        setIsInRegistrationFlow(inRegistrationFlow)
         
         if (!token) {
           console.log('No auth token found, user needs to log in')
@@ -135,6 +165,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         };
         setProfile(updatedUser)
         await userService.saveUserDataLocally(updatedUser)
+        
+        // Update registration flow state when user profile is updated
+        const inRegistrationFlow = await authStateManager.isInRegistrationFlow()
+        setIsInRegistrationFlow(inRegistrationFlow)
       } else {
         console.log("User data not saved locally");
       }
@@ -194,6 +228,44 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }
 
+  const refreshRegistrationState = async () => {
+    try {
+      const inRegistrationFlow = await authStateManager.isInRegistrationFlow()
+      console.log('[AuthProvider] Refreshing registration state:', inRegistrationFlow)
+      setIsInRegistrationFlow(inRegistrationFlow)
+      
+      // Force a re-evaluation of authentication state
+      setTimeout(() => {
+        console.log('[AuthProvider] Auth state after registration refresh:', {
+          accountsLength: accounts?.length ?? 0,
+          hasValidToken,
+          isInRegistrationFlow: inRegistrationFlow,
+          hasProfile: profile !== null
+        })
+      }, 100)
+    } catch (error) {
+      log.error('Failed to refresh registration state:', error)
+    }
+  }
+
+  const refreshExpertProfile = async () => {
+    try {
+      if (user) {
+        const expertProfile = await expertProgramService.getExpertHybrid(user.user.walletAddress)
+        if (expertProfile) {
+          const updatedUser = {
+            ...user,
+            expertProfile,
+          }
+          setProfile(updatedUser)
+          await userService.saveUserDataLocally(updatedUser)
+        }
+      }
+    } catch (error) {
+      log.error('Failed to refresh expert profile:', error)
+    }
+  }
+
   const signOut = async () => {
     try {
       log.info('Starting sign out process')
@@ -237,19 +309,34 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }
 
   const value: AuthState = useMemo(
-    () => ({
-      signIn: async () => {
-        return await signInMutation.mutateAsync()
-      },
-      signOut,
-      updateUser,
-      enableRole,
-      syncUserData,
-      isAuthenticated: (accounts?.length ?? 0) > 0 && hasValidToken,
-      isRegistered: profile !== null,
-      isLoading: signInMutation.isPending || isLoading || authLoading,
-      user,
-    }),
+    () => {
+      const accountsLength = accounts?.length ?? 0
+      const isAuth = accountsLength > 0 && (hasValidToken || isInRegistrationFlow || profile !== null)
+      
+      console.log('[AuthProvider] Authentication state:', {
+        accountsLength,
+        hasValidToken,
+        isInRegistrationFlow,
+        hasProfile: profile !== null,
+        isAuthenticated: isAuth
+      })
+      
+      return {
+        signIn: async () => {
+          return await signInMutation.mutateAsync()
+        },
+        signOut,
+        updateUser,
+        enableRole,
+        syncUserData,
+        refreshRegistrationState,
+        refreshExpertProfile,
+        isAuthenticated: isAuth,
+        isRegistered: profile !== null,
+        isLoading: signInMutation.isPending || isLoading || authLoading,
+        user,
+      }
+    },
     [
       accounts,
       signInMutation,
@@ -260,7 +347,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       updateUser,
       enableRole,
       syncUserData,
-      hasValidToken
+      refreshRegistrationState,
+      refreshExpertProfile,
+      hasValidToken,
+      isInRegistrationFlow
     ],
   )
 

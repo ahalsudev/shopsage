@@ -1,215 +1,287 @@
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/shopsage_payment.json`.
+ */
 export type ShopsagePayment = {
-  version: '0.1.0'
-  name: 'shopsage_payment'
-  instructions: [
+  "address": "GN61kESLP3vmVREX6nhTfqEf94vyuLX8YK4trEv6u6cZ",
+  "metadata": {
+    "name": "shopsagePayment",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "ShopSage Payment Processing and Commission Distribution"
+  },
+  "instructions": [
     {
-      name: 'initializePayment'
-      accounts: [
+      "name": "initializePayment",
+      "discriminator": [
+        10,
+        18,
+        43,
+        254,
+        174,
+        203,
+        246,
+        3
+      ],
+      "accounts": [
         {
-          name: 'paymentAccount'
-          isMut: true
-          isSigner: false
+          "name": "paymentAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  121,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              }
+            ]
+          }
         },
         {
-          name: 'authority'
-          isMut: true
-          isSigner: true
+          "name": "authority",
+          "writable": true,
+          "signer": true
         },
         {
-          name: 'systemProgram'
-          isMut: false
-          isSigner: false
-        },
-      ]
-      args: [
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
         {
-          name: 'consultationFee'
-          type: 'u64'
-        },
+          "name": "consultationFee",
+          "type": "u64"
+        }
       ]
     },
     {
-      name: 'processConsultationPayment'
-      accounts: [
+      "name": "processConsultationPayment",
+      "discriminator": [
+        66,
+        239,
+        49,
+        117,
+        118,
+        159,
+        101,
+        214
+      ],
+      "accounts": [
         {
-          name: 'paymentAccount'
-          isMut: true
-          isSigner: false
+          "name": "paymentAccount",
+          "writable": true
         },
         {
-          name: 'shopper'
-          isMut: true
-          isSigner: true
+          "name": "shopper",
+          "writable": true,
+          "signer": true
         },
         {
-          name: 'shopperTokenAccount'
-          isMut: true
-          isSigner: false
+          "name": "expert",
+          "writable": true
         },
         {
-          name: 'expertTokenAccount'
-          isMut: true
-          isSigner: false
+          "name": "platform",
+          "writable": true
         },
         {
-          name: 'platformTokenAccount'
-          isMut: true
-          isSigner: false
-        },
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
         {
-          name: 'tokenProgram'
-          isMut: false
-          isSigner: false
-        },
+          "name": "amount",
+          "type": "u64"
+        }
       ]
-      args: [
-        {
-          name: 'amount'
-          type: 'u64'
-        },
-      ]
-    },
-  ]
-  accounts: [
+    }
+  ],
+  "accounts": [
     {
-      name: 'paymentAccount'
-      type: {
-        kind: 'struct'
-        fields: [
+      "name": "paymentAccount",
+      "discriminator": [
+        47,
+        239,
+        218,
+        78,
+        43,
+        193,
+        1,
+        61
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "paymentAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
           {
-            name: 'authority'
-            type: 'publicKey'
+            "name": "authority",
+            "type": "pubkey"
           },
           {
-            name: 'consultationFee'
-            type: 'u64'
+            "name": "consultationFee",
+            "type": "u64"
           },
           {
-            name: 'bump'
-            type: 'u8'
-          },
+            "name": "bump",
+            "type": "u8"
+          }
         ]
       }
-    },
+    }
   ]
-  errors: [
-    {
-      code: 6000
-      name: 'InsufficientFunds'
-      msg: 'Insufficient funds for payment'
-    },
-    {
-      code: 6001
-      name: 'InvalidAmount'
-      msg: 'Invalid payment amount'
-    },
-  ]
-}
+};
 
 export const IDL: ShopsagePayment = {
-  version: '0.1.0',
-  name: 'shopsage_payment',
-  instructions: [
+  "address": "GN61kESLP3vmVREX6nhTfqEf94vyuLX8YK4trEv6u6cZ",
+  "metadata": {
+    "name": "shopsagePayment",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "ShopSage Payment Processing and Commission Distribution"
+  },
+  "instructions": [
     {
-      name: 'initializePayment',
-      accounts: [
-        {
-          name: 'paymentAccount',
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: 'authority',
-          isMut: true,
-          isSigner: true,
-        },
-        {
-          name: 'systemProgram',
-          isMut: false,
-          isSigner: false,
-        },
+      "name": "initializePayment",
+      "discriminator": [
+        10,
+        18,
+        43,
+        254,
+        174,
+        203,
+        246,
+        3
       ],
-      args: [
+      "accounts": [
         {
-          name: 'consultationFee',
-          type: 'u64',
+          "name": "paymentAccount",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  121,
+                  109,
+                  101,
+                  110,
+                  116
+                ]
+              }
+            ]
+          }
         },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
       ],
+      "args": [
+        {
+          "name": "consultationFee",
+          "type": "u64"
+        }
+      ]
     },
     {
-      name: 'processConsultationPayment',
-      accounts: [
-        {
-          name: 'paymentAccount',
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: 'shopper',
-          isMut: true,
-          isSigner: true,
-        },
-        {
-          name: 'shopperTokenAccount',
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: 'expertTokenAccount',
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: 'platformTokenAccount',
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: 'tokenProgram',
-          isMut: false,
-          isSigner: false,
-        },
+      "name": "processConsultationPayment",
+      "discriminator": [
+        66,
+        239,
+        49,
+        117,
+        118,
+        159,
+        101,
+        214
       ],
-      args: [
+      "accounts": [
         {
-          name: 'amount',
-          type: 'u64',
+          "name": "paymentAccount",
+          "writable": true
         },
+        {
+          "name": "shopper",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "expert",
+          "writable": true
+        },
+        {
+          "name": "platform",
+          "writable": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
       ],
-    },
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
   ],
-  accounts: [
+  "accounts": [
     {
-      name: 'paymentAccount',
-      type: {
-        kind: 'struct',
-        fields: [
+      "name": "paymentAccount",
+      "discriminator": [
+        47,
+        239,
+        218,
+        78,
+        43,
+        193,
+        1,
+        61
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "paymentAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
           {
-            name: 'authority',
-            type: 'publicKey',
+            "name": "authority",
+            "type": "pubkey"
           },
           {
-            name: 'consultationFee',
-            type: 'u64',
+            "name": "consultationFee",
+            "type": "u64"
           },
           {
-            name: 'bump',
-            type: 'u8',
-          },
-        ],
-      },
-    },
-  ],
-  errors: [
-    {
-      code: 6000,
-      name: 'InsufficientFunds',
-      msg: 'Insufficient funds for payment',
-    },
-    {
-      code: 6001,
-      name: 'InvalidAmount',
-      msg: 'Invalid payment amount',
-    },
-  ],
-}
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+};

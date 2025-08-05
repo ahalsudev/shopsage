@@ -44,8 +44,7 @@ export const userService = {
   async loadWalletAddressLocally(): Promise<string | null> {
     return await AsyncStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS)
   },
-  async saveUserDataLocally(user: UserCompleteProfile): Promise<void> {
-    
+  async saveUserDataLocally(user: UserCompleteProfile): Promise<void> {    
     try {
       if (!user) {
         throw new Error('User is null or undefined')
@@ -117,6 +116,9 @@ export const userService = {
         log.info('No profile data found in AsyncStorage')
         return null
       }
+
+      console.log("** ", profileData);
+      
 
       const profile: UserProfile = JSON.parse(profileData)
       const shopperProfile: ShopperProfile | undefined = shopperData ? JSON.parse(shopperData) : undefined
@@ -258,6 +260,16 @@ export const userService = {
     } catch (error) {
       log.error('Failed to update expert profile:', error)
       throw error
+    }
+  },
+
+  async getExpertProfile(walletAddress: string): Promise<ExpertProfile | null> {
+    try {
+      log.info('UserService: Getting expert profile', walletAddress)
+      return await dataProvider.getExpertProfile(walletAddress)
+    } catch (error) {
+      log.error('Failed to get expert profile:', error)
+      return null
     }
   },
 

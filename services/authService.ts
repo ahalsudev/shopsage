@@ -27,10 +27,7 @@ export const authService = {
       const result = await dataProvider.registerUser(walletAddress, name, email)
 
       // Store token locally
-      await AsyncStorage.setItem('token', result.token)
-
-      console.log("<>>>>>>", result);
-      
+      await AsyncStorage.setItem('token', result.token)      
 
       // Save complete user data locally for persistence
       await userService.saveUserDataLocally(result.user)

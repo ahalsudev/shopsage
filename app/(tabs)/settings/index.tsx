@@ -20,7 +20,7 @@ import { ExpertProfile, ShopperProfile } from '@/types/auth'
 
 export default function SettingsScreen() {
   const router = useRouter()
-  const { signOut } = useAuth()
+  const { signOut, refreshExpertProfile } = useAuth()
   const [profileName, setProfileName] = useState('')
   const [profileEmail, setProfileEmail] = useState('')
   const [originalName, setOriginalName] = useState('')
@@ -36,7 +36,7 @@ export default function SettingsScreen() {
     const userProfile = await userService.loadUserDataLocally();
     
     const shopperProfile = userProfile?.shopperProfile
-    const expertProfile = userProfile?.expertProfile
+    const expertProfile = userProfile?.expertProfile    
 
     if (userProfile?.user.name && userProfile?.user.email) {
       setProfileName(userProfile.user?.name)
@@ -62,7 +62,8 @@ export default function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       updateProfiles()
-    }, [updateProfiles])
+      refreshExpertProfile()
+    }, [updateProfiles, refreshExpertProfile])
   )
 
   const handleBecomeExpert = () => {

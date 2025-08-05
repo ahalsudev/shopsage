@@ -1,5 +1,5 @@
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
-import { Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
+import { Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, TransactionSignature } from '@solana/web3.js'
 import { PLATFORM_CONFIG } from '../constants/programs'
 import { dataProvider } from './dataProvider'
 import { solanaUtils } from '../utils/solana'
@@ -62,6 +62,96 @@ export interface ProgramPaymentParams {
 }
 
 export const paymentService = {
+  /**
+   * Process SOL-based consultation payment with platform fee distribution
+   * 80% to expert, 20% to platform
+   */
+  async processConsultationPayment(params: {
+    sessionId: string
+    expertWalletAddress: string
+    amount: number // in SOL
+    sessionData?: any
+  }): Promise<{
+    signature: TransactionSignature
+    expertAmount: number // in lamports
+    platformAmount: number // in lamports
+    totalAmount: number // in lamports
+  }> {
+    try {
+      console.log('[PaymentService] Processing SOL consultation payment...', params)
+
+      return await transact(async (wallet) => {
+        // Authorize wallet for payment
+        const authResult = await wallet.authorize({
+          cluster: PLATFORM_CONFIG.CLUSTER,
+          identity: {
+            name: 'ShopSage Payment',
+            uri: 'https://shopsage.app',
+            icon: 'favicon.ico',
+          },
+        })
+
+        const shopperPublicKey = authResult.accounts[0].publicKey
+        const expertPublicKey = new PublicKey(params.expertWalletAddress)
+        const totalLamports = solanaUtils.solToLamports(params.amount)
+
+        // Calculate fee distribution
+        const expertLamports = Math.floor(totalLamports * PLATFORM_CONFIG.EXPERT_COMMISSION_RATE)
+        const platformLamports = totalLamports - expertLamports
+
+        console.log('[PaymentService] Payment breakdown:', {
+          total: `${params.amount} SOL (${totalLamports} lamports)`,
+          expert: `${solanaUtils.lamportsToSol(expertLamports)} SOL (${expertLamports} lamports)`,
+          platform: `${solanaUtils.lamportsToSol(platformLamports)} SOL (${platformLamports} lamports)`,
+          shopper: shopperPublicKey.toString(),
+          expert: expertPublicKey.toString()
+        })
+
+        // Initialize Solana utils
+        await solanaUtils.initializePrograms(shopperPublicKey)
+
+        // Build payment processing transaction
+        const transaction = await solanaUtils.buildProcessPaymentTransaction(
+          shopperPublicKey,
+          expertPublicKey,
+          totalLamports
+        )
+
+        console.log('[PaymentService] Payment transaction built, requesting signature...')
+
+        // Sign and send transaction
+        const signatures = await wallet.signAndSendTransactions({
+          transactions: [transaction],
+        })
+
+        const signature = signatures[0]
+        console.log('[PaymentService] Payment processed successfully!', {
+          signature,
+          expertAmount: expertLamports,
+          platformAmount: platformLamports
+        })
+
+        return {
+          signature,
+          expertAmount: expertLamports,
+          platformAmount: platformLamports,
+          totalAmount: totalLamports
+        }
+      })
+    } catch (error) {
+      console.error('[PaymentService] Failed to process consultation payment:', error)
+      
+      // Enhanced error handling
+      if (error.message?.includes('User declined')) {
+        throw new Error('Payment cancelled by user')
+      } else if (error.message?.includes('Insufficient funds')) {
+        throw new Error('Insufficient SOL for payment and transaction fees')
+      } else {
+        throw new Error(`Payment failed: ${error.message || 'Unknown error'}`)
+      }
+    }
+  },
+
   async processPayment(paymentData: ProcessPaymentRequest): Promise<ProcessPaymentResponse> {
     try {
       const response = await dataProvider.processPayment({
@@ -302,19 +392,10 @@ export const paymentService = {
         // Initialize Solana utils with wallet
         await solanaUtils.initializePrograms(shopperPubkey)
 
-        // For now, we'll use native SOL transfer
-        // In the future, you can implement SPL token support
-        const shopperTokenAccount = params.shopperTokenAccount
-          ? new PublicKey(params.shopperTokenAccount)
-          : shopperPubkey
-
-        const expertTokenAccount = params.expertTokenAccount ? new PublicKey(params.expertTokenAccount) : expertPubkey
-
         // Build process payment transaction
         const transaction = await solanaUtils.buildProcessPaymentTransaction(
           shopperPubkey,
-          shopperTokenAccount,
-          expertTokenAccount,
+          expertPubkey,
           solanaUtils.solToLamports(params.amount),
         )
 
@@ -456,6 +537,188 @@ export const paymentService = {
     } catch (error) {
       console.error('Failed to get expert from chain:', error)
       return null
+    }
+  },
+
+  /**
+   * Enhanced payment history with blockchain transaction tracking
+   */
+  async getEnhancedPaymentHistory(walletAddress?: string): Promise<{
+    payments: PaymentWithDetails[]
+    blockchainTransactions: any[]
+    summary: {
+      totalPaid: number
+      totalReceived: number
+      transactionCount: number
+      platformFeesTotal: number
+    }
+  }> {
+    try {
+      console.log('[PaymentService] Fetching enhanced payment history...')
+
+      // Get backend payment history
+      const backendPayments = await this.getPaymentHistory()
+
+      // Get blockchain transaction history if wallet address provided
+      let blockchainTransactions: any[] = []
+      if (walletAddress) {
+        blockchainTransactions = await this.getWalletTransactionHistory(walletAddress)
+      }
+
+      // Calculate summary
+      const summary = {
+        totalPaid: 0,
+        totalReceived: 0,
+        transactionCount: backendPayments.length,
+        platformFeesTotal: 0
+      }
+
+      for (const payment of backendPayments) {
+        const amount = parseFloat(payment.amount)
+        // Assume if payment has a transaction hash, user was the payer
+        if (payment.transactionHash) {
+          summary.totalPaid += amount
+          summary.platformFeesTotal += amount * PLATFORM_CONFIG.PLATFORM_COMMISSION_RATE
+        } else {
+          summary.totalReceived += amount * PLATFORM_CONFIG.EXPERT_COMMISSION_RATE
+        }
+      }
+
+      console.log('[PaymentService] Payment history summary:', summary)
+
+      return {
+        payments: backendPayments,
+        blockchainTransactions,
+        summary
+      }
+    } catch (error) {
+      console.error('[PaymentService] Failed to get enhanced payment history:', error)
+      throw new Error('Failed to load payment history')
+    }
+  },
+
+  /**
+   * Get transaction history for a specific wallet from Solana blockchain
+   */
+  async getWalletTransactionHistory(walletAddress: string, limit: number = 50): Promise<any[]> {
+    try {
+      const connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT)
+      const publicKey = new PublicKey(walletAddress)
+
+      console.log(`[PaymentService] Fetching transaction history for wallet: ${walletAddress}`)
+
+      // Get confirmed signature for this wallet
+      const signatures = await connection.getSignaturesForAddress(publicKey, { limit })
+
+      // Get transaction details for each signature
+      const transactions = await Promise.all(
+        signatures.map(async (signatureInfo) => {
+          try {
+            const transaction = await connection.getTransaction(signatureInfo.signature, {
+              commitment: 'confirmed',
+              maxSupportedTransactionVersion: 0
+            })
+
+            if (!transaction) return null
+
+            // Parse transaction for ShopSage-related activity
+            const isShopSageTransaction = this.isShopSageTransaction(transaction)
+
+            return {
+              signature: signatureInfo.signature,
+              slot: signatureInfo.slot,
+              blockTime: signatureInfo.blockTime,
+              confirmationStatus: signatureInfo.confirmationStatus,
+              err: signatureInfo.err,
+              isShopSageTransaction,
+              transaction: isShopSageTransaction ? transaction : null
+            }
+          } catch (error) {
+            console.warn(`[PaymentService] Failed to get transaction ${signatureInfo.signature}:`, error)
+            return null
+          }
+        })
+      )
+
+      const validTransactions = transactions.filter(Boolean)
+      console.log(`[PaymentService] Found ${validTransactions.length} transactions for wallet`)
+
+      return validTransactions
+    } catch (error) {
+      console.error('[PaymentService] Failed to get wallet transaction history:', error)
+      return []
+    }
+  },
+
+  /**
+   * Check if a transaction is related to ShopSage programs
+   */
+  isShopSageTransaction(transaction: any): boolean {
+    if (!transaction?.transaction?.message) return false
+
+    const programIds = solanaUtils.getProgramIds()
+    const shopsageProgramIds = Object.values(programIds).map(id => id.toString())
+
+    // Check if any instruction involves our programs
+    const instructions = transaction.transaction.message.instructions || []
+    return instructions.some((instruction: any) => {
+      const programId = transaction.transaction.message.accountKeys[instruction.programIdIndex]?.toString()
+      return shopsageProgramIds.includes(programId || '')
+    })
+  },
+
+  /**
+   * Track payment status on blockchain
+   */
+  async trackPaymentStatus(transactionSignature: string): Promise<{
+    status: 'pending' | 'confirmed' | 'failed'
+    confirmations: number
+    blockTime?: number
+    fee?: number
+  }> {
+    try {
+      const connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT)
+      
+      console.log(`[PaymentService] Tracking payment status: ${transactionSignature}`)
+
+      // Get transaction details
+      const transaction = await connection.getTransaction(transactionSignature, {
+        commitment: 'confirmed',
+        maxSupportedTransactionVersion: 0
+      })
+
+      if (!transaction) {
+        return {
+          status: 'pending',
+          confirmations: 0
+        }
+      }
+
+      // Get current slot to calculate confirmations
+      const currentSlot = await connection.getSlot('confirmed')
+      const confirmations = transaction.slot ? currentSlot - transaction.slot : 0
+
+      const status = transaction.meta?.err ? 'failed' : 'confirmed'
+      
+      console.log(`[PaymentService] Payment status:`, {
+        signature: transactionSignature,
+        status,
+        confirmations,
+        slot: transaction.slot
+      })
+
+      return {
+        status,
+        confirmations,
+        blockTime: transaction.blockTime || undefined,
+        fee: transaction.meta?.fee
+      }
+    } catch (error) {
+      console.error('[PaymentService] Failed to track payment status:', error)
+      return {
+        status: 'pending',
+        confirmations: 0
+      }
     }
   },
 }

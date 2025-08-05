@@ -15,7 +15,7 @@ export interface IDataProvider {
   createShopperProfile(profileData: Partial<ShopperProfile>): Promise<ShopperProfile>
   getShopperProfile(): Promise<ShopperProfile>
   createExpertProfile(profileData: Partial<ExpertProfile>): Promise<ExpertProfile>
-  getExpertProfile(): Promise<ExpertProfile>
+  getExpertProfile(walletAddress: string): Promise<ExpertProfile>
 
   // Legacy Profile Management (for backward compatibility)
   updateUserProfile(updates: Partial<UserProfile>): Promise<UserProfile>
@@ -169,8 +169,8 @@ class RemoteDataProvider implements IDataProvider {
     })
   }
 
-  async getExpertProfile(): Promise<ExpertProfile> {
-    return this.makeApiCall('/profiles/expert')
+  async getExpertProfile(walletAddress: string): Promise<ExpertProfile> {
+    return this.makeApiCall(`/profiles/expert/${walletAddress}`)
   }
 
   // Legacy Profile Management (for backward compatibility)

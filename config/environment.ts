@@ -15,7 +15,7 @@ export interface AppConfig {
     showNetworkLogs: boolean
   }
   blockchain: {
-    cluster: 'devnet' | 'testnet' | 'mainnet-beta'
+    cluster: 'localnet' | 'devnet' | 'testnet' | 'mainnet-beta'
     rpcUrl: string
   }
   features: {
@@ -50,8 +50,8 @@ export const AppConfig: AppConfig = {
     showNetworkLogs: getBooleanEnvVar('EXPO_PUBLIC_SHOW_NETWORK_LOGS', __DEV__),
   },
   blockchain: {
-    cluster: (getEnvVar('EXPO_PUBLIC_SOLANA_CLUSTER', 'devnet') as any) || 'devnet',
-    rpcUrl: getEnvVar('EXPO_PUBLIC_SOLANA_RPC_URL', 'https://api.devnet.solana.com'),
+    cluster: (getEnvVar('EXPO_PUBLIC_SOLANA_CLUSTER', 'localnet') as any) || 'localnet',
+    rpcUrl: getEnvVar('EXPO_PUBLIC_SOLANA_RPC_URL', 'http://127.0.0.1:8899'),
   },
   features: {
     enableBlockchain: getBooleanEnvVar('EXPO_PUBLIC_ENABLE_BLOCKCHAIN', false),
@@ -101,7 +101,7 @@ export const validateConfig = (): { isValid: boolean; errors: string[] } => {
     errors.push('SOLANA_RPC_URL is required')
   }
 
-  const validClusters = ['devnet', 'testnet', 'mainnet-beta']
+  const validClusters = ['localnet', 'devnet', 'testnet', 'mainnet-beta']
   if (!validClusters.includes(AppConfig.blockchain.cluster)) {
     errors.push(`Invalid SOLANA_CLUSTER. Must be one of: ${validClusters.join(', ')}`)
   }

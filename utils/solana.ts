@@ -2,7 +2,7 @@ import { AnchorProvider, BN, Program, web3 } from '@coral-xyz/anchor'
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { Connection, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 
-import { PDA_SEEDS, PLATFORM_CONFIG, PROGRAM_IDS } from '../constants/programs'
+import { PDA_SEEDS, PLATFORM_CONFIG, getCurrentNetwork, getProgramIds } from '../constants/programs'
 import { IDL as ExpertIDL, ShopsageExpert } from '../types/programs/shopsage-expert'
 import { IDL as PaymentIDL, ShopsagePayment } from '../types/programs/shopsage-payment'
 import { IDL as SessionIDL, ShopsageSession } from '../types/programs/shopsage-session'
@@ -12,14 +12,41 @@ export class SolanaUtils {
   private paymentProgram: Program<ShopsagePayment> | null = null
   private sessionProgram: Program<ShopsageSession> | null = null
   private expertProgram: Program<ShopsageExpert> | null = null
+  private currentNetwork = getCurrentNetwork()
+  private programIds = getProgramIds(this.currentNetwork)
 
   constructor() {
     this.connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT, 'confirmed')
+    console.log(`[SolanaUtils] Initialized with network: ${this.currentNetwork}, RPC: ${PLATFORM_CONFIG.RPC_ENDPOINT}`)
+    console.log(`[SolanaUtils] Program IDs: ${JSON.stringify(this.programIds, null, 2)}`)
+    console.log(`[SolanaUtils] Platform config - Network: ${PLATFORM_CONFIG.NETWORK}, Cluster: ${PLATFORM_CONFIG.CLUSTER}`)
+  }
+
+  // Get current network and program IDs
+  getCurrentNetwork() {
+    return this.currentNetwork
+  }
+
+  getProgramIds() {
+    return this.programIds
+  }
+
+  getConnection() {
+    return this.connection
+  }
+
+  // Refresh network configuration (useful for development)
+  refreshNetworkConfig() {
+    this.currentNetwork = getCurrentNetwork()
+    this.programIds = getProgramIds(this.currentNetwork)
+    this.connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT, 'confirmed')
+    console.log(`[SolanaUtils] Network config refreshed: ${this.currentNetwork}`)
   }
 
   // Initialize programs with wallet provider
   async initializePrograms(walletPublicKey: PublicKey): Promise<void> {
     try {
+      console.log('[SolanaUtils] Initializing programs with walletPublicKey:', walletPublicKey.toString());
       // Create a mock provider for program initialization
       const provider = new AnchorProvider(
         this.connection,
@@ -30,10 +57,338 @@ export class SolanaUtils {
         },
         { commitment: 'confirmed' },
       )
+      console.log('[SolanaUtils] AnchorProvider created:', provider);
+      console.log('[SolanaUtils] Program IDs before program initialization:', this.programIds);
 
-      this.paymentProgram = new Program(PaymentIDL, PROGRAM_IDS.SHOPSAGE_PAYMENT, provider)
-      this.sessionProgram = new Program(SessionIDL, PROGRAM_IDS.SHOPSAGE_SESSION, provider)
-      this.expertProgram = new Program(ExpertIDL, PROGRAM_IDS.SHOPSAGE_EXPERT, provider)
+            console.log('[SolanaUtils] Type of SHOPSAGE_EXPERT program ID:', typeof this.programIds.SHOPSAGE_EXPERT, this.programIds.SHOPSAGE_EXPERT instanceof PublicKey);
+      
+      try {
+        console.log('[SolanaUtils] Initializing payment program...');
+        console.log('[SolanaUtils] Payment program ID:', this.programIds.SHOPSAGE_PAYMENT);
+        
+        // Create a minimal working IDL that's compatible with Anchor v0.30.0
+        const workingIDL = {
+          "version": "0.1.0",
+          "name": "shopsage_payment", 
+          "instructions": [
+            {
+              "name": "initializePayment",
+              "accounts": [
+                {
+                  "name": "paymentAccount",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "authority", 
+                  "isMut": true,
+                  "isSigner": true
+                },
+                {
+                  "name": "systemProgram",
+                  "isMut": false,
+                  "isSigner": false
+                }
+              ],
+              "args": [
+                {
+                  "name": "consultationFee",
+                  "type": "u64"
+                }
+              ]
+            },
+            {
+              "name": "processConsultationPayment",
+              "accounts": [
+                {
+                  "name": "paymentAccount",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "shopper",
+                  "isMut": true,
+                  "isSigner": true
+                },
+                {
+                  "name": "expert",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "platform",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "systemProgram",
+                  "isMut": false,
+                  "isSigner": false
+                }
+              ],
+              "args": [
+                {
+                  "name": "amount",
+                  "type": "u64"
+                }
+              ]
+            }
+          ],
+          "accounts": [
+            {
+              "name": "PaymentAccount",
+              "type": {
+                "kind": "struct",
+                "fields": [
+                  {
+                    "name": "authority",
+                    "type": "publicKey"
+                  },
+                  {
+                    "name": "consultationFee",
+                    "type": "u64"
+                  },
+                  {
+                    "name": "bump",
+                    "type": "u8"
+                  }
+                ]
+              }
+            }
+          ]
+        };
+
+        this.paymentProgram = new Program(
+          workingIDL as any,
+          this.programIds.SHOPSAGE_PAYMENT,
+          provider
+        )
+        console.log('[SolanaUtils] Payment program initialized successfully');
+      } catch (error) {
+        console.error('[SolanaUtils] Failed to initialize payment program:', error);
+        console.error('[SolanaUtils] Error details:', error.stack);
+        throw error;
+      }
+      
+      try {
+        console.log('[SolanaUtils] Initializing session program...');
+        
+        // Create a minimal working IDL for session program
+        const sessionWorkingIDL = {
+          "version": "0.1.0",
+          "name": "shopsage_session",
+          "instructions": [
+            {
+              "name": "createSession",
+              "accounts": [
+                {
+                  "name": "session",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "expert",
+                  "isMut": false,
+                  "isSigner": false
+                },
+                {
+                  "name": "shopper",
+                  "isMut": true,
+                  "isSigner": true
+                },
+                {
+                  "name": "systemProgram",
+                  "isMut": false,
+                  "isSigner": false
+                }
+              ],
+              "args": [
+                {
+                  "name": "sessionId",
+                  "type": "string"
+                },
+                {
+                  "name": "amount",
+                  "type": "u64"
+                }
+              ]
+            }
+          ],
+          "accounts": [
+            {
+              "name": "SessionAccount",
+              "type": {
+                "kind": "struct",
+                "fields": [
+                  {
+                    "name": "sessionId",
+                    "type": "string"
+                  },
+                  {
+                    "name": "expert",
+                    "type": "publicKey"
+                  },
+                  {
+                    "name": "shopper",
+                    "type": "publicKey"
+                  },
+                  {
+                    "name": "amount",
+                    "type": "u64"
+                  },
+                  {
+                    "name": "status",
+                    "type": "u8"
+                  },
+                  {
+                    "name": "startTime",
+                    "type": "i64"
+                  },
+                  {
+                    "name": "bump",
+                    "type": "u8"
+                  }
+                ]
+              }
+            }
+          ]
+        };
+        
+        this.sessionProgram = new Program(
+          sessionWorkingIDL as any,
+          this.programIds.SHOPSAGE_SESSION,
+          provider
+        )
+        console.log('[SolanaUtils] Session program initialized successfully');
+      } catch (error) {
+        console.error('[SolanaUtils] Failed to initialize session program:', error);
+        throw error;
+      }
+      
+      try {
+        console.log('[SolanaUtils] Initializing expert program...');
+        
+        // Create a minimal working IDL for expert program
+        const expertWorkingIDL = {
+          "version": "0.1.0",
+          "name": "shopsage_expert",
+          "instructions": [
+            {
+              "name": "registerExpert",
+              "accounts": [
+                {
+                  "name": "expert",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "authority",
+                  "isMut": true,
+                  "isSigner": true
+                },
+                {
+                  "name": "systemProgram",
+                  "isMut": false,
+                  "isSigner": false
+                }
+              ],
+              "args": [
+                {
+                  "name": "name",
+                  "type": "string"
+                },
+                {
+                  "name": "specialization",
+                  "type": "string"
+                },
+                {
+                  "name": "sessionRate",
+                  "type": "u64"
+                }
+              ]
+            },
+            {
+              "name": "updateExpertStatus",
+              "accounts": [
+                {
+                  "name": "expert",
+                  "isMut": true,
+                  "isSigner": false
+                },
+                {
+                  "name": "authority",
+                  "isMut": false,
+                  "isSigner": true
+                }
+              ],
+              "args": [
+                {
+                  "name": "isOnline",
+                  "type": "bool"
+                }
+              ]
+            }
+          ],
+          "accounts": [
+            {
+              "name": "ExpertAccount",
+              "type": {
+                "kind": "struct",
+                "fields": [
+                  {
+                    "name": "authority",
+                    "type": "publicKey"
+                  },
+                  {
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "name": "specialization",
+                    "type": "string"
+                  },
+                  {
+                    "name": "sessionRate",
+                    "type": "u64"
+                  },
+                  {
+                    "name": "rating",
+                    "type": "u64"
+                  },
+                  {
+                    "name": "totalConsultations",
+                    "type": "u64"
+                  },
+                  {
+                    "name": "isVerified",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "isOnline",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "bump",
+                    "type": "u8"
+                  }
+                ]
+              }
+            }
+          ]
+        };
+        
+        this.expertProgram = new Program(
+          expertWorkingIDL as any,
+          this.programIds.SHOPSAGE_EXPERT,
+          provider
+        )
+        console.log('[SolanaUtils] Expert program initialized successfully');
+      } catch (error) {
+        console.error('[SolanaUtils] Failed to initialize expert program:', error);
+        throw error;
+      }
+      
+      console.log('[SolanaUtils] All programs initialized. Program IDs:', this.programIds);
     } catch (error) {
       console.error('Failed to initialize programs:', error)
       throw error
@@ -48,16 +403,16 @@ export class SolanaUtils {
     )
   }
 
-  static findPaymentAccount(): [PublicKey, number] {
-    return this.findProgramAddress([PDA_SEEDS.PAYMENT], PROGRAM_IDS.SHOPSAGE_PAYMENT)
+  findPaymentAccount(): [PublicKey, number] {
+    return SolanaUtils.findProgramAddress([PDA_SEEDS.PAYMENT], this.programIds.SHOPSAGE_PAYMENT)
   }
 
-  static findSessionAccount(sessionId: string): [PublicKey, number] {
-    return this.findProgramAddress([PDA_SEEDS.SESSION, sessionId], PROGRAM_IDS.SHOPSAGE_SESSION)
+  findSessionAccount(sessionId: string): [PublicKey, number] {
+    return SolanaUtils.findProgramAddress([PDA_SEEDS.SESSION, sessionId], this.programIds.SHOPSAGE_SESSION)
   }
 
-  static findExpertAccount(authority: PublicKey): [PublicKey, number] {
-    return this.findProgramAddress([PDA_SEEDS.EXPERT, authority.toBuffer()], PROGRAM_IDS.SHOPSAGE_EXPERT)
+  findExpertAccount(authority: PublicKey): [PublicKey, number] {
+    return SolanaUtils.findProgramAddress([PDA_SEEDS.EXPERT, authority.toBuffer()], this.programIds.SHOPSAGE_EXPERT)
   }
 
   // Payment program interactions
@@ -66,7 +421,7 @@ export class SolanaUtils {
       throw new Error('Payment program not initialized')
     }
 
-    const [paymentAccount] = SolanaUtils.findPaymentAccount()
+    const [paymentAccount] = this.findPaymentAccount()
 
     const tx = await this.paymentProgram.methods
       .initializePayment(new BN(consultationFee))
@@ -82,25 +437,23 @@ export class SolanaUtils {
 
   async buildProcessPaymentTransaction(
     shopper: PublicKey,
-    shopperTokenAccount: PublicKey,
-    expertTokenAccount: PublicKey,
+    expert: PublicKey,
     amount: number,
   ): Promise<Transaction> {
     if (!this.paymentProgram) {
       throw new Error('Payment program not initialized')
     }
 
-    const [paymentAccount] = SolanaUtils.findPaymentAccount()
+    const [paymentAccount] = this.findPaymentAccount()
 
     const tx = await this.paymentProgram.methods
       .processConsultationPayment(new BN(amount))
       .accounts({
         paymentAccount,
         shopper,
-        shopperTokenAccount,
-        expertTokenAccount,
-        platformTokenAccount: PLATFORM_CONFIG.PLATFORM_WALLET,
-        tokenProgram: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+        expert,
+        platform: PLATFORM_CONFIG.PLATFORM_WALLET,
+        systemProgram: SystemProgram.programId,
       })
       .transaction()
 
@@ -118,7 +471,7 @@ export class SolanaUtils {
       throw new Error('Session program not initialized')
     }
 
-    const [sessionAccount] = SolanaUtils.findSessionAccount(sessionId)
+    const [sessionAccount] = this.findSessionAccount(sessionId)
 
     const tx = await this.sessionProgram.methods
       .createSession(sessionId, new BN(amount))
@@ -138,7 +491,7 @@ export class SolanaUtils {
       throw new Error('Session program not initialized')
     }
 
-    const [sessionAccount] = SolanaUtils.findSessionAccount(sessionId)
+    const [sessionAccount] = this.findSessionAccount(sessionId)
 
     const tx = await this.sessionProgram.methods
       .startSession(sessionId)
@@ -156,7 +509,7 @@ export class SolanaUtils {
       throw new Error('Session program not initialized')
     }
 
-    const [sessionAccount] = SolanaUtils.findSessionAccount(sessionId)
+    const [sessionAccount] = this.findSessionAccount(sessionId)
 
     const tx = await this.sessionProgram.methods
       .endSession(sessionId)
@@ -174,7 +527,7 @@ export class SolanaUtils {
       throw new Error('Session program not initialized')
     }
 
-    const [sessionAccount] = SolanaUtils.findSessionAccount(sessionId)
+    const [sessionAccount] = this.findSessionAccount(sessionId)
 
     const tx = await this.sessionProgram.methods
       .cancelSession(sessionId)
@@ -199,7 +552,7 @@ export class SolanaUtils {
       throw new Error('Expert program not initialized')
     }
 
-    const [expertAccount] = SolanaUtils.findExpertAccount(authority)
+    const [expertAccount] = this.findExpertAccount(authority)
 
     const tx = await this.expertProgram.methods
       .registerExpert(name, specialization, new BN(sessionRate))
@@ -210,6 +563,10 @@ export class SolanaUtils {
       })
       .transaction()
 
+    console.log('[SolanaUtils] Register Expert Transaction built:', JSON.stringify(tx.serializeMessage().toString('hex')));
+    console.log('[SolanaUtils] Register Expert Transaction accounts:', tx.instructions[0].keys.map(key => key.pubkey.toString()));
+    console.log('[SolanaUtils] Register Expert Transaction data:', tx.instructions[0].data.toString('hex'));
+
     return tx
   }
 
@@ -218,7 +575,7 @@ export class SolanaUtils {
       throw new Error('Expert program not initialized')
     }
 
-    const [expertAccount] = SolanaUtils.findExpertAccount(authority)
+    const [expertAccount] = this.findExpertAccount(authority)
 
     const tx = await this.expertProgram.methods
       .updateExpertStatus(isOnline)
@@ -237,7 +594,7 @@ export class SolanaUtils {
       throw new Error('Session program not initialized')
     }
 
-    const [sessionAccount] = SolanaUtils.findSessionAccount(sessionId)
+    const [sessionAccount] = this.findSessionAccount(sessionId)
 
     try {
       return await this.sessionProgram.account.sessionAccount.fetch(sessionAccount)
@@ -247,12 +604,29 @@ export class SolanaUtils {
     }
   }
 
+  async getSessionParticipants(sessionId: string): Promise<{ shopper: PublicKey; expert: PublicKey } | null> {
+    try {
+      const sessionData = await this.getSessionAccount(sessionId)
+      if (!sessionData) {
+        return null
+      }
+      
+      return {
+        shopper: sessionData.shopper,
+        expert: sessionData.expert
+      }
+    } catch (error) {
+      console.error('Failed to get session participants:', error)
+      return null
+    }
+  }
+
   async getExpertAccount(authority: PublicKey) {
     if (!this.expertProgram) {
       throw new Error('Expert program not initialized')
     }
 
-    const [expertAccount] = SolanaUtils.findExpertAccount(authority)
+    const [expertAccount] = this.findExpertAccount(authority)
 
     try {
       return await this.expertProgram.account.expertAccount.fetch(expertAccount)

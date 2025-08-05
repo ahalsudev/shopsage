@@ -1,391 +1,655 @@
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/shopsage_session.json`.
+ */
 export type ShopsageSession = {
-  version: '0.1.0'
-  name: 'shopsage_session'
-  instructions: [
+  "address": "5dDShygfkN6qwRh7jrPN5BmNcDY4EF5LY88Ffw7dS1Zc",
+  "metadata": {
+    "name": "shopsageSession",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "ShopSage Session Management"
+  },
+  "instructions": [
     {
-      name: 'createSession'
-      accounts: [
+      "name": "cancelSession",
+      "discriminator": [
+        57,
+        207,
+        155,
+        166,
+        136,
+        32,
+        99,
+        116
+      ],
+      "accounts": [
         {
-          name: 'session'
-          isMut: true
-          isSigner: false
+          "name": "session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sessionId"
+              }
+            ]
+          }
         },
         {
-          name: 'expert'
-          isMut: false
-          isSigner: false
+          "name": "shopper",
+          "signer": true
         },
         {
-          name: 'shopper'
-          isMut: true
-          isSigner: true
-        },
+          "name": "expert",
+          "signer": true
+        }
+      ],
+      "args": [
         {
-          name: 'systemProgram'
-          isMut: false
-          isSigner: false
-        },
-      ]
-      args: [
-        {
-          name: 'sessionId'
-          type: 'string'
-        },
-        {
-          name: 'amount'
-          type: 'u64'
-        },
+          "name": "sessionId",
+          "type": "string"
+        }
       ]
     },
     {
-      name: 'startSession'
-      accounts: [
+      "name": "createSession",
+      "discriminator": [
+        242,
+        193,
+        143,
+        179,
+        150,
+        25,
+        122,
+        227
+      ],
+      "accounts": [
         {
-          name: 'session'
-          isMut: true
-          isSigner: false
+          "name": "session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sessionId"
+              }
+            ]
+          }
         },
         {
-          name: 'expert'
-          isMut: false
-          isSigner: true
+          "name": "expert"
         },
-      ]
-      args: [
         {
-          name: 'sessionId'
-          type: 'string'
+          "name": "shopper",
+          "writable": true,
+          "signer": true
         },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "sessionId",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
       ]
     },
     {
-      name: 'endSession'
-      accounts: [
+      "name": "endSession",
+      "discriminator": [
+        11,
+        244,
+        61,
+        154,
+        212,
+        249,
+        15,
+        66
+      ],
+      "accounts": [
         {
-          name: 'session'
-          isMut: true
-          isSigner: false
+          "name": "session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sessionId"
+              }
+            ]
+          }
         },
         {
-          name: 'expert'
-          isMut: false
-          isSigner: true
-        },
-      ]
-      args: [
+          "name": "expert",
+          "signer": true
+        }
+      ],
+      "args": [
         {
-          name: 'sessionId'
-          type: 'string'
-        },
+          "name": "sessionId",
+          "type": "string"
+        }
       ]
     },
     {
-      name: 'cancelSession'
-      accounts: [
+      "name": "startSession",
+      "discriminator": [
+        23,
+        227,
+        111,
+        142,
+        212,
+        230,
+        3,
+        175
+      ],
+      "accounts": [
         {
-          name: 'session'
-          isMut: true
-          isSigner: false
+          "name": "session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sessionId"
+              }
+            ]
+          }
         },
         {
-          name: 'shopper'
-          isMut: false
-          isSigner: true
-        },
+          "name": "expert",
+          "signer": true
+        }
+      ],
+      "args": [
         {
-          name: 'expert'
-          isMut: false
-          isSigner: true
-        },
+          "name": "sessionId",
+          "type": "string"
+        }
       ]
-      args: [
-        {
-          name: 'sessionId'
-          type: 'string'
-        },
-      ]
-    },
-  ]
-  accounts: [
+    }
+  ],
+  "accounts": [
     {
-      name: 'sessionAccount'
-      type: {
-        kind: 'struct'
-        fields: [
+      "name": "sessionAccount",
+      "discriminator": [
+        74,
+        34,
+        65,
+        133,
+        96,
+        163,
+        80,
+        69
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "invalidStatus",
+      "msg": "Invalid session status"
+    },
+    {
+      "code": 6001,
+      "name": "unauthorized",
+      "msg": "Unauthorized action"
+    }
+  ],
+  "types": [
+    {
+      "name": "sessionAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
           {
-            name: 'sessionId'
-            type: 'string'
+            "name": "sessionId",
+            "type": "string"
           },
           {
-            name: 'expert'
-            type: 'publicKey'
+            "name": "expert",
+            "type": "pubkey"
           },
           {
-            name: 'shopper'
-            type: 'publicKey'
+            "name": "shopper",
+            "type": "pubkey"
           },
           {
-            name: 'amount'
-            type: 'u64'
+            "name": "amount",
+            "type": "u64"
           },
           {
-            name: 'status'
-            type: {
-              defined: 'SessionStatus'
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "sessionStatus"
+              }
             }
           },
           {
-            name: 'startTime'
-            type: 'i64'
+            "name": "startTime",
+            "type": "i64"
           },
           {
-            name: 'actualStartTime'
-            type: {
-              option: 'i64'
+            "name": "actualStartTime",
+            "type": {
+              "option": "i64"
             }
           },
           {
-            name: 'endTime'
-            type: {
-              option: 'i64'
+            "name": "endTime",
+            "type": {
+              "option": "i64"
             }
           },
           {
-            name: 'bump'
-            type: 'u8'
-          },
+            "name": "bump",
+            "type": "u8"
+          }
         ]
       }
     },
-  ]
-  types: [
     {
-      name: 'SessionStatus'
-      type: {
-        kind: 'enum'
-        variants: [
+      "name": "sessionStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
           {
-            name: 'Pending'
+            "name": "pending"
           },
           {
-            name: 'Active'
+            "name": "active"
           },
           {
-            name: 'Completed'
+            "name": "completed"
           },
           {
-            name: 'Cancelled'
-          },
+            "name": "cancelled"
+          }
         ]
       }
-    },
+    }
   ]
-  errors: [
-    {
-      code: 6000
-      name: 'InvalidStatus'
-      msg: 'Invalid session status'
-    },
-    {
-      code: 6001
-      name: 'Unauthorized'
-      msg: 'Unauthorized action'
-    },
-  ]
-}
+};
 
 export const IDL: ShopsageSession = {
-  version: '0.1.0',
-  name: 'shopsage_session',
-  instructions: [
+  "address": "5dDShygfkN6qwRh7jrPN5BmNcDY4EF5LY88Ffw7dS1Zc",
+  "metadata": {
+    "name": "shopsageSession",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "ShopSage Session Management"
+  },
+  "instructions": [
     {
-      name: 'createSession',
-      accounts: [
-        {
-          name: 'session',
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: 'expert',
-          isMut: false,
-          isSigner: false,
-        },
-        {
-          name: 'shopper',
-          isMut: true,
-          isSigner: true,
-        },
-        {
-          name: 'systemProgram',
-          isMut: false,
-          isSigner: false,
-        },
+      "name": "cancelSession",
+      "discriminator": [
+        57,
+        207,
+        155,
+        166,
+        136,
+        32,
+        99,
+        116
       ],
-      args: [
+      "accounts": [
         {
-          name: 'sessionId',
-          type: 'string',
+          "name": "session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sessionId"
+              }
+            ]
+          }
         },
         {
-          name: 'amount',
-          type: 'u64',
+          "name": "shopper",
+          "signer": true
         },
+        {
+          "name": "expert",
+          "signer": true
+        }
       ],
+      "args": [
+        {
+          "name": "sessionId",
+          "type": "string"
+        }
+      ]
     },
     {
-      name: 'startSession',
-      accounts: [
-        {
-          name: 'session',
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: 'expert',
-          isMut: false,
-          isSigner: true,
-        },
+      "name": "createSession",
+      "discriminator": [
+        242,
+        193,
+        143,
+        179,
+        150,
+        25,
+        122,
+        227
       ],
-      args: [
+      "accounts": [
         {
-          name: 'sessionId',
-          type: 'string',
+          "name": "session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sessionId"
+              }
+            ]
+          }
         },
+        {
+          "name": "expert"
+        },
+        {
+          "name": "shopper",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
       ],
+      "args": [
+        {
+          "name": "sessionId",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
     },
     {
-      name: 'endSession',
-      accounts: [
-        {
-          name: 'session',
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: 'expert',
-          isMut: false,
-          isSigner: true,
-        },
+      "name": "endSession",
+      "discriminator": [
+        11,
+        244,
+        61,
+        154,
+        212,
+        249,
+        15,
+        66
       ],
-      args: [
+      "accounts": [
         {
-          name: 'sessionId',
-          type: 'string',
+          "name": "session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sessionId"
+              }
+            ]
+          }
         },
+        {
+          "name": "expert",
+          "signer": true
+        }
       ],
+      "args": [
+        {
+          "name": "sessionId",
+          "type": "string"
+        }
+      ]
     },
     {
-      name: 'cancelSession',
-      accounts: [
-        {
-          name: 'session',
-          isMut: true,
-          isSigner: false,
-        },
-        {
-          name: 'shopper',
-          isMut: false,
-          isSigner: true,
-        },
-        {
-          name: 'expert',
-          isMut: false,
-          isSigner: true,
-        },
+      "name": "startSession",
+      "discriminator": [
+        23,
+        227,
+        111,
+        142,
+        212,
+        230,
+        3,
+        175
       ],
-      args: [
+      "accounts": [
         {
-          name: 'sessionId',
-          type: 'string',
+          "name": "session",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  101,
+                  115,
+                  115,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "sessionId"
+              }
+            ]
+          }
         },
+        {
+          "name": "expert",
+          "signer": true
+        }
       ],
-    },
+      "args": [
+        {
+          "name": "sessionId",
+          "type": "string"
+        }
+      ]
+    }
   ],
-  accounts: [
+  "accounts": [
     {
-      name: 'sessionAccount',
-      type: {
-        kind: 'struct',
-        fields: [
-          {
-            name: 'sessionId',
-            type: 'string',
-          },
-          {
-            name: 'expert',
-            type: 'publicKey',
-          },
-          {
-            name: 'shopper',
-            type: 'publicKey',
-          },
-          {
-            name: 'amount',
-            type: 'u64',
-          },
-          {
-            name: 'status',
-            type: {
-              defined: 'SessionStatus',
-            },
-          },
-          {
-            name: 'startTime',
-            type: 'i64',
-          },
-          {
-            name: 'actualStartTime',
-            type: {
-              option: 'i64',
-            },
-          },
-          {
-            name: 'endTime',
-            type: {
-              option: 'i64',
-            },
-          },
-          {
-            name: 'bump',
-            type: 'u8',
-          },
-        ],
-      },
-    },
+      "name": "sessionAccount",
+      "discriminator": [
+        74,
+        34,
+        65,
+        133,
+        96,
+        163,
+        80,
+        69
+      ]
+    }
   ],
-  types: [
+  "errors": [
     {
-      name: 'SessionStatus',
-      type: {
-        kind: 'enum',
-        variants: [
-          {
-            name: 'Pending',
-          },
-          {
-            name: 'Active',
-          },
-          {
-            name: 'Completed',
-          },
-          {
-            name: 'Cancelled',
-          },
-        ],
-      },
+      "code": 6000,
+      "name": "invalidStatus",
+      "msg": "Invalid session status"
     },
+    {
+      "code": 6001,
+      "name": "unauthorized",
+      "msg": "Unauthorized action"
+    }
   ],
-  errors: [
+  "types": [
     {
-      code: 6000,
-      name: 'InvalidStatus',
-      msg: 'Invalid session status',
+      "name": "sessionAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sessionId",
+            "type": "string"
+          },
+          {
+            "name": "expert",
+            "type": "pubkey"
+          },
+          {
+            "name": "shopper",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "sessionStatus"
+              }
+            }
+          },
+          {
+            "name": "startTime",
+            "type": "i64"
+          },
+          {
+            "name": "actualStartTime",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "endTime",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
     },
     {
-      code: 6001,
-      name: 'Unauthorized',
-      msg: 'Unauthorized action',
-    },
-  ],
-}
+      "name": "sessionStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "pending"
+          },
+          {
+            "name": "active"
+          },
+          {
+            "name": "completed"
+          },
+          {
+            "name": "cancelled"
+          }
+        ]
+      }
+    }
+  ]
+};

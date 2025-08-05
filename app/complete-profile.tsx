@@ -1,15 +1,34 @@
 import { useAuth } from '@/components/auth/auth-provider'
 import { userService } from '@/services/userService'
 import { useRouter } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { authStateManager } from '../utils/authStateManager'
 
 export default function CompleteProfile() {
   const { isLoading, updateUser } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const router = useRouter()
+
+  // Check for valid registration state on mount
+  useEffect(() => {
+    const checkRegistrationState = async () => {
+      const isInFlow = await authStateManager.isInRegistrationFlow()
+      
+      if (!isInFlow) {
+        console.log('[CompleteProfile] No active registration flow, redirecting to connect wallet')
+        router.replace('/(auth)/connect-wallet')
+        return
+      }
+      
+      const registrationState = await authStateManager.loadRegistrationState()
+      console.log('[CompleteProfile] Active registration flow detected:', registrationState)
+    }
+
+    checkRegistrationState()
+  }, [router])
 
   const handleRegister = async () => {
     if (!name.trim()) {
@@ -42,6 +61,9 @@ export default function CompleteProfile() {
           shopperProfile: user.shopper,
           expertProfile: user.expert,
         })
+        
+        // Complete registration flow
+        await authStateManager.completeRegistrationFlow()
         router.push('/(tabs)/explore')
       }
     } catch (error) {

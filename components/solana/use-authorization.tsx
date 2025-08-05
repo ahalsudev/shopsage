@@ -147,16 +147,28 @@ export function useAuthorization() {
 
   const authorizeSessionWithSignIn = useCallback(
     async (wallet: AuthorizeAPI, signInPayload: SignInPayload) => {
+      console.log('[Authorization] Starting authorization with sign-in for cluster:', selectedCluster.id)
       const authorizationResult = await wallet.authorize({
         identity,
         chain: selectedCluster.id,
         auth_token: fetchQuery.data?.authToken,
         sign_in_payload: signInPayload,
       })
-      console.log('reached here - authorizeSessionWithSignIn')
-      return (await handleAuthorizationResult(authorizationResult)).selectedAccount
+      console.log('[Authorization] Authorization result received:', {
+        hasAccounts: !!authorizationResult.accounts,
+        accountCount: authorizationResult.accounts?.length ?? 0,
+        hasAuthToken: !!authorizationResult.auth_token
+      })
+      
+      const result = await handleAuthorizationResult(authorizationResult)
+      console.log('[Authorization] Authorization handled, selected account:', result.selectedAccount.publicKey.toString())
+      
+      // Force invalidate queries to ensure fresh data
+      await invalidateAuthorizations()
+      
+      return result.selectedAccount
     },
-    [fetchQuery.data?.authToken, handleAuthorizationResult, selectedCluster.id],
+    [fetchQuery.data?.authToken, handleAuthorizationResult, selectedCluster.id, invalidateAuthorizations],
   )
 
   const deauthorizeSession = useCallback(

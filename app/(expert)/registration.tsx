@@ -1,29 +1,31 @@
-import { AppDispatch, RootState } from '@/store'
-import { createCurrentUserProfile } from '@/store/thunks/expertThunks'
 import { GradientHeader } from '@/components/common/GradientHeader'
 import { useNavigation } from '@react-navigation/native'
 import { StackNavigationProp } from '@react-navigation/stack'
 import { router } from 'expo-router'
 import React, { useState } from 'react'
 import { Alert, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { useDispatch, useSelector } from 'react-redux'
 import { RootStackParamList } from '../_layout'
+
+import { expertProgramService } from '@/services/expertProgramService'
 
 type ExpertRegistrationScreenNavigationProp = StackNavigationProp<RootStackParamList, 'ExpertRegistration'>
 
 const ExpertRegistrationScreen: React.FC = () => {
   const navigation = useNavigation<ExpertRegistrationScreenNavigationProp>()
-  const dispatch = useDispatch<AppDispatch>()
-  const { profileLoading, profileError } = useSelector((state: RootState) => state.experts)
+  const [isLoading, setIsLoading] = useState(false)
 
   const [specialization, setSpecialization] = useState('')
+  const [name, setName] = useState('')
   const [bio, setBio] = useState('')
   const [sessionRate, setSessionRate] = useState('')
   const [profileImageUrl, setProfileImageUrl] = useState('')
 
   const handleCreateProfile = async () => {
-    if (!specialization.trim() || !sessionRate.trim()) {
-      Alert.alert('Error', 'Please fill in specialization and session rate')
+    console.log('[Registration] ===== EXPERT REGISTRATION FORM SUBMITTED =====')
+    console.log('[Registration] Form data:', { name, specialization, sessionRate, bio, profileImageUrl })
+    
+    if (!specialization.trim() || !sessionRate.trim() || !name.trim()) {
+      Alert.alert('Error', 'Please fill in specialization, session rate and name')
       return
     }
 
@@ -34,6 +36,7 @@ const ExpertRegistrationScreen: React.FC = () => {
     }
 
     const profileData = {
+      name: name.trim(),
       specialization: specialization.trim(),
       bio: bio.trim() || undefined,
       sessionRate: rate,
@@ -41,9 +44,11 @@ const ExpertRegistrationScreen: React.FC = () => {
     }
 
     try {
-      const result = await dispatch(createCurrentUserProfile(profileData))
+      setIsLoading(true)
+      console.log('[Registration] Calling expertProgramService.registerExpertHybrid with:', profileData)
+      const result = await expertProgramService.registerExpertHybrid(profileData)
 
-      if (createCurrentUserProfile.fulfilled.match(result)) {
+      if (result.chainResult.signature) {
         Alert.alert('Success', 'Your expert profile has been created successfully!', [
           {
             text: 'OK',
@@ -51,11 +56,13 @@ const ExpertRegistrationScreen: React.FC = () => {
           },
         ])
       } else {
-        Alert.alert('Error', (result.payload as string) || 'Failed to create expert profile')
+        Alert.alert('Error', 'Failed to create expert profile')
       }
     } catch (error) {
       console.error('Error creating expert profile:', error)
       Alert.alert('Error', 'Failed to create expert profile. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -68,6 +75,17 @@ const ExpertRegistrationScreen: React.FC = () => {
       <SafeAreaView style={styles.contentContainer}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.content}>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Name *</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter your name"
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
 
           {/* Specialization Input */}
           <View style={styles.inputContainer}>
@@ -125,12 +143,12 @@ const ExpertRegistrationScreen: React.FC = () => {
 
           {/* Create Profile Button */}
           <TouchableOpacity
-            style={[styles.createButton, profileLoading && styles.createButtonDisabled]}
+            style={[styles.createButton, isLoading && styles.createButtonDisabled]}
             onPress={handleCreateProfile}
-            disabled={profileLoading}
+            disabled={isLoading}
           >
             <Text style={styles.createButtonText}>
-              {profileLoading ? 'Creating Profile...' : 'Create Expert Profile'}
+              {isLoading ? 'Creating Profile...' : 'Create Expert Profile'}
             </Text>
           </TouchableOpacity>
 
