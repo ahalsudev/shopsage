@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("BE2PGfJWduNCchbXfX392oP4P2BCbNwHdWA3JpjVxjh9");
+declare_id!("5dDShygfkN6qwRh7jrPN5BmNcDY4EF5LY88Ffw7dS1Zc");
 
 #[program]
 pub mod shopsage_session {
@@ -22,15 +22,15 @@ pub mod shopsage_session {
         Ok(())
     }
 
-    pub fn start_session(ctx: Context<StartSession>, session_id: String) -> Result<()> {
+    pub fn start_session(ctx: Context<StartSession>, _session_id: String) -> Result<()> {
         let session = &mut ctx.accounts.session;
-        require!(
-            session.status == SessionStatus::Pending,
-            SessionError::InvalidStatus
-        );
         require!(
             session.expert == ctx.accounts.expert.key(),
             SessionError::Unauthorized
+        );
+        require!(
+            session.status == SessionStatus::Pending,
+            SessionError::InvalidStatus
         );
 
         session.status = SessionStatus::Active;
@@ -39,7 +39,7 @@ pub mod shopsage_session {
     }
 
     // Todo: have end_session call payment program to process payments
-    pub fn end_session(ctx: Context<EndSession>, session_id: String) -> Result<()> {
+    pub fn end_session(ctx: Context<EndSession>, _session_id: String) -> Result<()> {
         let session = &mut ctx.accounts.session;
         require!(
             session.status == SessionStatus::Active,
@@ -56,7 +56,7 @@ pub mod shopsage_session {
     }
 
     // Todo: have different cancellation instruction for experts and shoppers
-    pub fn cancel_session(ctx: Context<CancelSession>, session_id: String) -> Result<()> {
+    pub fn cancel_session(ctx: Context<CancelSession>, _session_id: String) -> Result<()> {
         let session = &mut ctx.accounts.session;
         require!(
             session.status == SessionStatus::Pending,

@@ -9,9 +9,14 @@ skip-lint = false
 members = ["shopsage-payment", "shopsage-expert", "shopsage-session"]
 
 [programs.localnet]
-shopsage-payment = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
-shopsage-expert = "H9yJ6t8VN7jRmE3sKuPnXbfWVv5qgZt8VnKmHx2FdvGE"
-shopsage-session = "J8bL4qVx2cRtGnMfHs3XzNvK4wYt7PzHdC9qFrE6aWuG"
+shopsage-payment = "GN61kESLP3vmVREX6nhTfqEf94vyuLX8YK4trEv6u6cZ"
+shopsage-expert = "GHfHdFkfV93FGVz5atrTSUyBHpKkot4XkTRTaVdHD9b3"
+shopsage-session = "5dDShygfkN6qwRh7jrPN5BmNcDY4EF5LY88Ffw7dS1Zc"
+
+[programs.devnet]
+shopsage-payment = "GN61kESLP3vmVREX6nhTfqEf94vyuLX8YK4trEv6u6cZ"
+shopsage-expert = "GHfHdFkfV93FGVz5atrTSUyBHpKkot4XkTRTaVdHD9b3"
+shopsage-session = "5dDShygfkN6qwRh7jrPN5BmNcDY4EF5LY88Ffw7dS1Zc"
 
 [registry]
 url = "https://api.apr.dev"

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, Token, Transfer};
+use anchor_lang::system_program;
 
-declare_id!("6cMZaPoG9diMkt9ZAjM4QVKiTzEEnS5X5m3Rk4KD2GiH");
+declare_id!("GN61kESLP3vmVREX6nhTfqEf94vyuLX8YK4trEv6u6cZ");
 
 #[program]
 pub mod shopsage_payment {
@@ -23,25 +23,25 @@ pub mod shopsage_payment {
         let expert_commission = amount * 80 / 100;
         let platform_commission = amount - expert_commission;
 
+        // Transfer 80% to expert
         let expert_transfer_ctx = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.shopper_token_account.to_account_info(),
-                to: ctx.accounts.expert_token_account.to_account_info(),
-                authority: ctx.accounts.shopper.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.shopper.to_account_info(),
+                to: ctx.accounts.expert.to_account_info(),
             },
         );
-        token::transfer(expert_transfer_ctx, expert_commission)?;
+        system_program::transfer(expert_transfer_ctx, expert_commission)?;
 
+        // Transfer 20% to platform
         let platform_transfer_ctx = CpiContext::new(
-            ctx.accounts.token_program.to_account_info(),
-            Transfer {
-                from: ctx.accounts.shopper_token_account.to_account_info(),
-                to: ctx.accounts.platform_token_account.to_account_info(),
-                authority: ctx.accounts.shopper.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.shopper.to_account_info(),
+                to: ctx.accounts.platform.to_account_info(),
             },
         );
-        token::transfer(platform_transfer_ctx, platform_commission)?;
+        system_program::transfer(platform_transfer_ctx, platform_commission)?;
 
         Ok(())
     }
@@ -68,16 +68,13 @@ pub struct ProcessPayment<'info> {
     pub payment_account: Account<'info, PaymentAccount>,
     #[account(mut)]
     pub shopper: Signer<'info>,
-    /// CHECK: shopper's token account - validated by token program
+    /// CHECK: expert account to receive SOL payment
     #[account(mut)]
-    pub shopper_token_account: AccountInfo<'info>,
-    /// CHECK: expert's token account - validated by token program
+    pub expert: AccountInfo<'info>,
+    /// CHECK: platform account to receive SOL commission
     #[account(mut)]
-    pub expert_token_account: AccountInfo<'info>,
-    /// CHECK: platform's token account - validated by token program
-    #[account(mut)]
-    pub platform_token_account: AccountInfo<'info>,
-    pub token_program: Program<'info, Token>,
+    pub platform: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[account]

@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("96WDSiHJAPs4WmTVn8Yv5JnnWgZR8rz6JCCJiwWBn2Me");
+declare_id!("GHfHdFkfV93FGVz5atrTSUyBHpKkot4XkTRTaVdHD9b3");
 
 #[program]
 pub mod shopsage_expert {
@@ -10,13 +10,13 @@ pub mod shopsage_expert {
         ctx: Context<RegisterExpert>,
         name: String,
         specialization: String,
-        hourly_rate: u64,
+        session_rate: u64,
     ) -> Result<()> {
         let expert = &mut ctx.accounts.expert;
         expert.authority = ctx.accounts.authority.key();
         expert.name = name;
         expert.specialization = specialization;
-        expert.hourly_rate = hourly_rate;
+        expert.session_rate = session_rate;
         expert.rating = 0;
         expert.total_consultations = 0;
         expert.is_verified = false;
@@ -94,7 +94,7 @@ pub struct ExpertAccount {
     pub name: String,
     #[max_len(50)]
     pub specialization: String,
-    pub hourly_rate: u64,
+    pub session_rate: u64,
     pub rating: u64,
     pub total_consultations: u64,
     pub is_verified: bool,
