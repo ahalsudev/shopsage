@@ -1,14 +1,13 @@
 import { Account, useAuthorization } from '@/components/solana/use-authorization'
 import { useMobileWallet } from '@/components/solana/use-mobile-wallet'
-import { AppConfig } from '@/constants/app-config'
+import { AppConfig, log } from '@/config/environment'
 import { useMutation } from '@tanstack/react-query'
 import { createContext, type PropsWithChildren, use, useCallback, useEffect, useMemo, useState } from 'react'
-import { log } from '../../config/environment'
 import { userService } from '../../services/userService'
 import { UserCompleteProfile } from '../../types/auth'
 import { authStateManager } from '../../utils/authStateManager'
 
-import { expertProgramService } from '@/services/expertProgramService';
+import { expertProgramService } from '@/services/expertProgramService'
 
 export interface AuthState {
   isAuthenticated: boolean
@@ -20,8 +19,7 @@ export interface AuthState {
   updateUser: (updates: Partial<UserCompleteProfile>) => Promise<void>
   enableRole: (role: 'shopper' | 'expert', profileData: any) => Promise<void>
   syncUserData: () => Promise<void>
-  refreshRegistrationState: () => Promise<void>
-  refreshExpertProfile: () => Promise<void>
+  switchRole: (role: 'shopper' | 'expert') => Promise<void>
 }
 
 const Context = createContext<AuthState>({} as AuthState)
@@ -42,11 +40,11 @@ function useSignInMutation(onSignInSuccess?: (walletAddress: string) => void) {
     mutationFn: async () => {
       console.log('[AuthProvider] Starting signIn with payload:', {
         uri: AppConfig.uri,
-        domain: 'shopsage.site',
+        domain: AppConfig.domain,
       })
 
       const result = await signIn({
-        domain: 'shopsage.site',
+        domain: AppConfig.domain,
         uri: AppConfig.uri,
         statement: 'Sign in to ShopSage',
         issuedAt: new Date().toISOString(),
@@ -77,8 +75,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const { accounts, isLoading } = useAuthorization()
   const [profile, setProfile] = useState<UserCompleteProfile | null>(null)
   const [authLoading, setAuthLoading] = useState(false)
-  const [hasValidToken, setHasValidToken] = useState(false)
-  const [isInRegistrationFlow, setIsInRegistrationFlow] = useState(false)
 
   // Initialize user on first sign in
   const onSignInSuccess = useCallback(async (walletAddress: string) => {
@@ -107,29 +103,33 @@ export function AuthProvider({ children }: PropsWithChildren) {
         // Check if we have a valid auth token
         const AsyncStorage = await import('@react-native-async-storage/async-storage').then((m) => m.default)
         const token = await AsyncStorage.getItem('token')
-        
-        // Check if user is in registration flow
-        const inRegistrationFlow = await authStateManager.isInRegistrationFlow()
-        setIsInRegistrationFlow(inRegistrationFlow)
-        
+
         if (!token) {
           console.log('No auth token found, user needs to log in')
           setProfile(null)
-          setHasValidToken(false)
           return
         }
-        
+
+        // Check token validity
+        const { authService } = await import('../../services/authService')
+        const isValid = await authService.isTokenValid()
+
+        if (!isValid) {
+          console.log('Token expired or invalid, clearing session')
+          await authService.logout()
+          setProfile(null)
+          return
+        }
+
         const userData = await userService.loadUserDataLocally()
         if (userData) {
           console.log('Loaded user data with valid token')
           setProfile(userData)
-          setHasValidToken(true)
         } else {
           console.log('No user data found despite having token')
           // Token exists but no user data - clear token
-          await AsyncStorage.removeItem('token')
+          await authService.logout()
           setProfile(null)
-          setHasValidToken(false)
         }
       } catch (error) {
         console.error('Error loading user data:', error)
@@ -137,7 +137,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const AsyncStorage = await import('@react-native-async-storage/async-storage').then((m) => m.default)
         await AsyncStorage.removeItem('token')
         setProfile(null)
-        setHasValidToken(false)
       }
     }
 
@@ -161,8 +160,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const updatedUser: UserCompleteProfile = {
           user: updates.user,
           shopperProfile: updates.shopperProfile,
-          expertProfile: updates.expertProfile
-        };
+          expertProfile: updates.expertProfile,
+        }
         setProfile(updatedUser)
         await userService.saveUserDataLocally(updatedUser)
         
@@ -170,7 +169,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const inRegistrationFlow = await authStateManager.isInRegistrationFlow()
         setIsInRegistrationFlow(inRegistrationFlow)
       } else {
-        console.log("User data not saved locally");
+        console.log('User data not saved locally')
       }
     } catch (error) {
       console.log('Error updating user data:', error)
@@ -273,13 +272,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       // Clear local state immediately
       setProfile(null)
 
-      // Clear local storage
-      try {
-        await userService.clearUserDataLocally()
-      } catch (storageError) {
-        log.warn('Failed to clear local storage during signout:', storageError)
-        // Continue with signout even if storage clearing fails
-      }
+      // Use authService logout for comprehensive cleanup
+      const { authService } = await import('../../services/authService')
+      await authService.logout()
 
       // Disconnect wallet last (this affects isAuthenticated)
       try {
@@ -308,35 +303,41 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }
 
-  const value: AuthState = useMemo(
-    () => {
-      const accountsLength = accounts?.length ?? 0
-      const isAuth = accountsLength > 0 && (hasValidToken || isInRegistrationFlow || profile !== null)
-      
-      console.log('[AuthProvider] Authentication state:', {
-        accountsLength,
-        hasValidToken,
-        isInRegistrationFlow,
-        hasProfile: profile !== null,
-        isAuthenticated: isAuth
-      })
-      
-      return {
-        signIn: async () => {
-          return await signInMutation.mutateAsync()
-        },
-        signOut,
-        updateUser,
-        enableRole,
-        syncUserData,
-        refreshRegistrationState,
-        refreshExpertProfile,
-        isAuthenticated: isAuth,
-        isRegistered: profile !== null,
-        isLoading: signInMutation.isPending || isLoading || authLoading,
-        user,
+  const switchRole = async (role: 'shopper' | 'expert') => {
+    try {
+      setAuthLoading(true)
+      log.info('Switching role to:', role)
+      if (profile) {
+        const updatedUser = {
+          ...profile,
+          activeRole: role,
+        }
+        setProfile(updatedUser)
+        await userService.saveUserDataLocally(updatedUser)
       }
-    },
+    } catch (error) {
+      log.error('Failed to switch role:', error)
+      throw error
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  const value: AuthState = useMemo(
+    () => ({
+      signIn: async () => {
+        return await signInMutation.mutateAsync()
+      },
+      signOut,
+      updateUser,
+      enableRole,
+      syncUserData,
+      switchRole,
+      isAuthenticated: (accounts?.length ?? 0) > 0,
+      isRegistered: profile !== null,
+      isLoading: signInMutation.isPending || isLoading || authLoading,
+      user,
+    }),
     [
       accounts,
       signInMutation,
@@ -347,10 +348,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       updateUser,
       enableRole,
       syncUserData,
-      refreshRegistrationState,
-      refreshExpertProfile,
-      hasValidToken,
-      isInRegistrationFlow
+      switchRole,
+      profile,
     ],
   )
 

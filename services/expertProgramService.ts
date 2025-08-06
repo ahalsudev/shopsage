@@ -1,9 +1,8 @@
+import { AppConfig } from '@/config/environment'
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { PublicKey, TransactionSignature } from '@solana/web3.js'
 import { PLATFORM_CONFIG } from '../constants/programs'
 import { solanaUtils } from '../utils/solana'
-import { paymentService } from './paymentService'
-import { toUint8Array } from 'js-base64'
 
 console.log('[ExpertProgram] 🔄 EXPERT PROGRAM SERVICE LOADED WITH FIXES - VERSION 2024-08-05')
 
@@ -51,24 +50,13 @@ export const expertProgramService = {
         const authResult = await wallet.authorize({
           cluster: PLATFORM_CONFIG.CLUSTER,
           identity: {
-            name: 'ShopSage Expert Registration',
-            uri: 'https://shopsage.app',
+            name: 'ShopSage',
+            uri: AppConfig.uri,
             icon: 'favicon.ico',
           },
         })
-        console.log('[ExpertProgram] Wallet authorization completed')
 
-        console.log('[ExpertProgram] Authorization result:', JSON.stringify(authResult, null, 2));
-        const account = authResult.accounts && authResult.accounts.length > 0 ? authResult.accounts[0] : undefined;
-        if (!account) {
-          console.error('[ExpertProgram] Wallet authorization failed. Full auth result:', authResult);
-          throw new Error('Wallet authorization failed. Please try again.')
-        }
-        
-        // Convert base64 address to PublicKey
-        const publicKeyByteArray = toUint8Array(account.address)
-        const authority = new PublicKey(publicKeyByteArray)
-        console.log('[ExpertProgram] Wallet authorized:', authority.toString())
+        const authority = solanaUtils.getPublicKeyFromAddress(authResult.accounts[0].address)
 
         // Initialize Solana utils with wallet
         await solanaUtils.initializePrograms(authority)
@@ -161,21 +149,13 @@ export const expertProgramService = {
         const authResult = await wallet.authorize({
           cluster: PLATFORM_CONFIG.CLUSTER,
           identity: {
-            name: 'ShopSage Expert Status',
-            uri: 'https://shopsage.app',
+            name: 'ShopSage',
+            uri: AppConfig.uri,
             icon: 'favicon.ico',
           },
         })
 
-        const account = authResult.accounts && authResult.accounts.length > 0 ? authResult.accounts[0] : undefined;
-        if (!account) {
-          throw new Error('Wallet authorization failed. Please try again.')
-        }
-        
-        // Convert base64 address to PublicKey
-        const publicKeyByteArray = toUint8Array(account.address)
-        const authority = new PublicKey(publicKeyByteArray)
-        console.log('[ExpertProgram] Wallet authorized for status update:', authority.toString())
+        const authority = solanaUtils.getPublicKeyFromAddress(authResult.accounts[0].address)
 
         // Initialize Solana utils with wallet
         await solanaUtils.initializePrograms(authority)

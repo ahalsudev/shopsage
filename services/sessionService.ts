@@ -6,6 +6,7 @@ import { VideoCallCredentials, videoCallService } from './videoCallService'
 
 export interface CreateSessionRequest {
   expertId: string
+  shopperId: string
   startTime: string // ISO 8601 format
   amount: string // BigDecimal as string
 }

@@ -71,81 +71,80 @@ export default function ExpertOnboarding() {
 
   return (
     <View style={styles.container}>
-      <GradientHeader 
+      <GradientHeader
         title="Become an Expert"
         subtitle="Share your expertise and help shoppers make better decisions"
       />
       <SafeAreaView style={styles.contentContainer}>
         <ScrollView style={styles.scrollView}>
-
-        {/* Specialization Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Specialization</Text>
-          <Text style={styles.sectionDescription}>What's your main area of expertise?</Text>
-          <View style={styles.tagsContainer}>
-            {specializations.map((specialization) => (
-              <TouchableOpacity
-                key={specialization}
-                style={[styles.tag, selectedSpecialization === specialization && styles.selectedTag]}
-                onPress={() => setSelectedSpecialization(specialization)}
-              >
-                <Text style={[styles.tagText, selectedSpecialization === specialization && styles.selectedTagText]}>
-                  {specialization}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {/* Specialization Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Your Specialization</Text>
+            <Text style={styles.sectionDescription}>What&apos;s your main area of expertise?</Text>
+            <View style={styles.tagsContainer}>
+              {specializations.map((specialization) => (
+                <TouchableOpacity
+                  key={specialization}
+                  style={[styles.tag, selectedSpecialization === specialization && styles.selectedTag]}
+                  onPress={() => setSelectedSpecialization(specialization)}
+                >
+                  <Text style={[styles.tagText, selectedSpecialization === specialization && styles.selectedTagText]}>
+                    {specialization}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Bio Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About You</Text>
-          <Text style={styles.sectionDescription}>
-            Tell shoppers about your experience and expertise (100-300 characters)
-          </Text>
-          <TextInput
-            style={styles.bioInput}
-            multiline
-            numberOfLines={4}
-            value={bio}
-            onChangeText={setBio}
-            placeholder="I'm a seasoned professional with 5+ years of experience in..."
-            maxLength={300}
-          />
-          <Text style={styles.charCount}>{bio.length}/300</Text>
-        </View>
-
-        {/* Session Rate Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Session Rate</Text>
-          <Text style={styles.sectionDescription}>Set your consultation rate (in SOL per 5-minute session)</Text>
-          <View style={styles.rateContainer}>
-            <Text style={styles.ratePrefix}>◎</Text>
+          {/* Bio Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About You</Text>
+            <Text style={styles.sectionDescription}>
+              Tell shoppers about your experience and expertise (100-300 characters)
+            </Text>
             <TextInput
-              style={styles.rateInput}
-              value={sessionRate}
-              onChangeText={setSessionRate}
-              keyboardType="decimal-pad"
-              placeholder="0.10"
+              style={styles.bioInput}
+              multiline
+              numberOfLines={4}
+              value={bio}
+              onChangeText={setBio}
+              placeholder="I'm a seasoned professional with 5+ years of experience in..."
+              maxLength={300}
             />
-            <Text style={styles.rateSuffix}>SOL/session</Text>
+            <Text style={styles.charCount}>{bio.length}/300</Text>
           </View>
 
-          <View style={styles.rateExamples}>
-            <Text style={styles.rateExampleTitle}>Rate Guidelines (per 5-minute session):</Text>
-            <Text style={styles.rateExample}>• Beginner: 0.05 - 0.10 SOL/session</Text>
-            <Text style={styles.rateExample}>• Experienced: 0.10 - 0.25 SOL/session</Text>
-            <Text style={styles.rateExample}>• Expert: 0.25+ SOL/session</Text>
-          </View>
-        </View>
+          {/* Session Rate Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Session Rate</Text>
+            <Text style={styles.sectionDescription}>Set your consultation rate (in SOL per 5-minute session)</Text>
+            <View style={styles.rateContainer}>
+              <Text style={styles.ratePrefix}>◎</Text>
+              <TextInput
+                style={styles.rateInput}
+                value={sessionRate}
+                onChangeText={setSessionRate}
+                keyboardType="decimal-pad"
+                placeholder="0.10"
+              />
+              <Text style={styles.rateSuffix}>SOL/session</Text>
+            </View>
 
-        <TouchableOpacity
-          style={[styles.completeButton, isLoading && styles.disabledButton]}
-          onPress={handleComplete}
-          disabled={isLoading}
-        >
-          <Text style={styles.completeButtonText}>{isLoading ? 'Creating Profile...' : 'Complete Expert Setup'}</Text>
-        </TouchableOpacity>
+            <View style={styles.rateExamples}>
+              <Text style={styles.rateExampleTitle}>Rate Guidelines (per 5-minute session):</Text>
+              <Text style={styles.rateExample}>• Beginner: 0.05 - 0.10 SOL/session</Text>
+              <Text style={styles.rateExample}>• Experienced: 0.10 - 0.25 SOL/session</Text>
+              <Text style={styles.rateExample}>• Expert: 0.25+ SOL/session</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.completeButton, isLoading && styles.disabledButton]}
+            onPress={handleComplete}
+            disabled={isLoading}
+          >
+            <Text style={styles.completeButtonText}>{isLoading ? 'Creating Profile...' : 'Complete Expert Setup'}</Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     </View>

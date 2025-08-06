@@ -1,138 +1,28 @@
 import { useAuth } from '@/components/auth/auth-provider'
 import { authService } from '@/services/authService'
-import { userService } from '@/services/userService'
 import { useRouter } from 'expo-router'
-import { useEffect } from 'react'
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useState } from 'react'
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { authStateManager } from '../../utils/authStateManager'
 
 export default function ConnectWalletScreen() {
-  const { signIn, isLoading, updateUser, refreshRegistrationState } = useAuth()
+  const { isLoading, signIn } = useAuth()
   const router = useRouter()
-
-  // Check for interrupted registration flow on component mount
-  useEffect(() => {
-    const checkForInterruptedFlow = async () => {
-      const recovery = await authStateManager.recoverRegistrationFlow()
-      
-      if (recovery.shouldRedirectToRegistration) {
-        console.log('[ConnectWallet] Detected interrupted registration flow, recovering...', recovery)
-        
-        if (recovery.step === 'complete-profile') {
-          // User was in the middle of completing profile
-          router.push('/complete-profile')
-        } else if (recovery.step === 'connect-wallet') {
-          // User was connecting wallet, they can continue here
-          console.log('[ConnectWallet] User can continue with wallet connection')
-        }
-      }
-    }
-
-    checkForInterruptedFlow()
-  }, [router])
+  const [signingMessage] = useState(false)
 
   const handleConnect = async () => {
-    try {
-      console.log('[ConnectWallet] Starting wallet connection...')
+    let account = await signIn()
+    const walletAddress = account.publicKey.toString()
+
+    if (walletAddress) {
+      const loginResponse = await authService.loginUser(walletAddress)
       
-      // First check if user data exists locally (they haven't logged out)
-      const existingUserData = await userService.loadUserDataLocally()
-      console.log('[ConnectWallet] Existing user data:', existingUserData ? 'Found' : 'None')
-
-      // Connect wallet to get account
-      console.log('[ConnectWallet] Calling signIn...')
-      const account = await signIn()
-      console.log('[ConnectWallet] SignIn result:', account ? 'Success' : 'Failed', account?.publicKey?.toString())
-      
-      if (!account || !account.publicKey) {
-        throw new Error('Failed to get account from wallet connection')
-      }
-      
-      const walletAddress = account.publicKey.toString()
-      console.log('[ConnectWallet] Wallet connected:', walletAddress)
-
-      // Refresh auth provider registration state (initial check)
-      await refreshRegistrationState()
-
-      if (existingUserData && existingUserData.user.walletAddress === walletAddress) {
-        // User has local data for this wallet - just login with backend and redirect
-        console.log('Found existing user data locally, logging in...')
-        try {
-          const loginResponse = await authService.loginUser(walletAddress)
-          if (loginResponse !== 404) {            
-            // Update local data with any backend changes
-            await updateUser(loginResponse.user)
-            await authStateManager.completeRegistrationFlow()
-            router.push('/(tabs)/explore')
-            return
-          }
-        } catch (error) {
-          console.log('Backend login failed, using local data:', error)
-          // Fallback to local data if backend fails
-          await authStateManager.completeRegistrationFlow()
-          router.push('/(tabs)/explore')
-          return
-        }
-      }
-
-      // No local data or different wallet - try to login with backend
-      console.log('No local data found, checking if user exists in backend...')
-      let loginResponse
-      try {
-        loginResponse = await authService.loginUser(walletAddress)
-        console.log('[ConnectWallet] Login response:', loginResponse, 'Type:', typeof loginResponse)
-      } catch (error) {
-        console.error('[ConnectWallet] Login call threw error:', error)
-        // Treat any error as user not found for now
-        loginResponse = 404
-      }
-
-      if (loginResponse === 404) {
-        // User doesn't exist - redirect to registration
-        console.log('[ConnectWallet] User not found, starting registration flow...')
-        
-        try {
-          await authStateManager.startRegistrationFlow(walletAddress)
-          console.log('[ConnectWallet] Registration flow started')
-          
-          await authStateManager.updateRegistrationStep('complete-profile')
-          console.log('[ConnectWallet] Registration step updated to complete-profile')
-          
-          // Update auth provider registration state so isAuthenticated becomes true
-          await refreshRegistrationState()
-          console.log('[ConnectWallet] Auth provider registration state refreshed')
-          
-          // Add a small delay to ensure state updates have propagated
-          await new Promise(resolve => setTimeout(resolve, 100))
-          
-          console.log('[ConnectWallet] Navigating to complete-profile...')
-          router.push('/complete-profile')
-        } catch (error) {
-          console.error('[ConnectWallet] Error setting up registration:', error)
-          throw error
-        }
+      if (loginResponse.status !== 404) {
+        router.push('/(tabs)/explore')
       } else {
-        // User exists in backend - save their data and redirect
-        console.log('User found in backend, logging in...')
-        await updateUser(loginResponse.user)
-        
-        // Check if user has profiles to decide where to redirect
-        const hasShopperProfile = loginResponse.user.shopperProfile
-        const hasExpertProfile = loginResponse.user.expertProfile
-        
-        if (!hasShopperProfile && !hasExpertProfile) {
-          // User exists but has no profiles - redirect to complete profile
-          await authStateManager.updateRegistrationStep('complete-profile')
-          router.push('/complete-profile')
-        } else {
-          // User has at least one profile - redirect to main app
-          await authStateManager.completeRegistrationFlow()
-          router.push('/(tabs)/explore')
-        }
+        console.log("Redirecting to complete profile page...");
+        router.replace('/complete-profile')
       }
-    } catch (error) {
-      Alert.alert('Connection Failed', error instanceof Error ? error.message : 'Failed to connect wallet')
     }
   }
 
@@ -141,16 +31,18 @@ export default function ConnectWalletScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Connect Your Wallet</Text>
-          <Text style={styles.subtitle}>Connect your Solana wallet to get started with ShopSage</Text>
+          <Text style={styles.subtitle}>Connect and sign in with your Solana wallet to access ShopSage securely</Text>
         </View>
 
         {/* Connect Button */}
         <TouchableOpacity
-          style={[styles.connectButton, isLoading && styles.connectButtonDisabled]}
+          style={[styles.connectButton, (isLoading || signingMessage) && styles.connectButtonDisabled]}
           onPress={handleConnect}
-          disabled={isLoading}
+          disabled={isLoading || signingMessage}
         >
-          <Text style={styles.connectButtonText}>{isLoading ? 'Connecting...' : 'Connect Wallet'}</Text>
+          <Text style={styles.connectButtonText}>
+            {signingMessage ? 'Authenticating...' : isLoading ? 'Connecting...' : 'Connect & Sign In'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

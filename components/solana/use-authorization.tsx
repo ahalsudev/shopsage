@@ -1,5 +1,5 @@
 import { useCluster } from '@/components/cluster/cluster-provider'
-import { AppConfig } from '@/constants/app-config'
+import { AppConfig } from '@/config/environment'
 import { ellipsify } from '@/utils/ellipsify'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
@@ -32,6 +32,7 @@ type WalletAuthorization = Readonly<{
   accounts: Account[]
   authToken: AuthToken
   selectedAccount: Account
+  signInResult?: any
 }>
 
 function getAccountFromAuthorizedAccount(account: AuthorizedAccount): Account {
@@ -66,6 +67,7 @@ function getAuthorizationFromAuthorizationResult(
     accounts: authorizationResult.accounts.map(getAccountFromAuthorizedAccount),
     authToken: authorizationResult.auth_token,
     selectedAccount,
+    signInResult: (authorizationResult as any).sign_in_result,
   }
 }
 
@@ -135,12 +137,22 @@ export function useAuthorization() {
 
   const authorizeSession = useCallback(
     async (wallet: AuthorizeAPI) => {
-      const authorizationResult = await wallet.authorize({
+      const authParams = {
         identity,
         chain: selectedCluster.id,
         auth_token: fetchQuery.data?.authToken,
-      })
-      return (await handleAuthorizationResult(authorizationResult)).selectedAccount
+      }
+      console.log('authorizeSession called with params:', authParams)
+      console.log('selectedCluster:', selectedCluster)
+
+      try {
+        const authorizationResult = await wallet.authorize(authParams)
+        console.log('authorization successful:', authorizationResult)
+        return (await handleAuthorizationResult(authorizationResult)).selectedAccount
+      } catch (error) {
+        console.error('authorization failed:', error)
+        throw error
+      }
     },
     [fetchQuery.data?.authToken, handleAuthorizationResult, selectedCluster.id],
   )
@@ -154,19 +166,7 @@ export function useAuthorization() {
         auth_token: fetchQuery.data?.authToken,
         sign_in_payload: signInPayload,
       })
-      console.log('[Authorization] Authorization result received:', {
-        hasAccounts: !!authorizationResult.accounts,
-        accountCount: authorizationResult.accounts?.length ?? 0,
-        hasAuthToken: !!authorizationResult.auth_token
-      })
-      
-      const result = await handleAuthorizationResult(authorizationResult)
-      console.log('[Authorization] Authorization handled, selected account:', result.selectedAccount.publicKey.toString())
-      
-      // Force invalidate queries to ensure fresh data
-      await invalidateAuthorizations()
-      
-      return result.selectedAccount
+      return (await handleAuthorizationResult(authorizationResult)).selectedAccount
     },
     [fetchQuery.data?.authToken, handleAuthorizationResult, selectedCluster.id, invalidateAuthorizations],
   )

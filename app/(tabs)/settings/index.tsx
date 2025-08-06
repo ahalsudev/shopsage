@@ -12,7 +12,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native'
 
 import { userService } from '@/services/userService'
@@ -28,13 +28,12 @@ export default function SettingsScreen() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [isExpert, setIsExpert] = useState(false)
-  const [shopperProfile, setShopperProfile] = useState<ShopperProfile|undefined>(undefined)
-  const [expertProfile, setExpertProfile] = useState<ExpertProfile|undefined>(undefined)
-
+  const [shopperProfile, setShopperProfile] = useState<ShopperProfile | undefined>(undefined)
+  const [expertProfile, setExpertProfile] = useState<ExpertProfile | undefined>(undefined)
 
   const updateProfiles = useCallback(async () => {
-    const userProfile = await userService.loadUserDataLocally();
-    
+    const userProfile = await userService.loadUserDataLocally()
+
     const shopperProfile = userProfile?.shopperProfile
     const expertProfile = userProfile?.expertProfile    
 
@@ -62,19 +61,14 @@ export default function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       updateProfiles()
-      refreshExpertProfile()
-    }, [updateProfiles, refreshExpertProfile])
+    }, [updateProfiles]),
   )
 
   const handleBecomeExpert = () => {
-    Alert.alert(
-      'Become an Expert',
-      'Would you like to register as an expert to help others with shopping advice?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Register', onPress: () => router.push('/(expert)/registration') }
-      ]
-    )
+    Alert.alert('Become an Expert', 'Would you like to register as an expert to help others with shopping advice?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Register', onPress: () => router.push('/(expert)/registration') },
+    ])
   }
 
   const handleManageExpertProfile = () => {
@@ -94,11 +88,11 @@ export default function SettingsScreen() {
 
     try {
       setIsUpdatingProfile(true)
-      
+
       // Update user profile via userService
       const updatedProfile = await userService.updateUserProfile({
         name: profileName.trim(),
-        email: profileEmail.trim()
+        email: profileEmail.trim(),
       })
 
       // Update local storage with the new data
@@ -111,7 +105,7 @@ export default function SettingsScreen() {
       // Update local state
       setOriginalName(profileName.trim())
       setOriginalEmail(profileEmail.trim())
-      
+
       Alert.alert('Success', 'Profile updated successfully!')
     } catch (error) {
       console.error('Failed to update profile:', error)
@@ -129,179 +123,165 @@ export default function SettingsScreen() {
   const hasProfileChanges = profileName !== originalName || profileEmail !== originalEmail
 
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await signOut()
-              router.replace('/welcome')
-            } catch (error) {
-              Alert.alert('Error', 'Failed to sign out. Please try again.')
-            }
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await signOut()
+            router.replace('/welcome')
+          } catch (error) {
+            Alert.alert('Error', 'Failed to sign out. Please try again.')
           }
-        }
-      ]
-    )
+        },
+      },
+    ])
   }
 
   return (
     <View style={styles.container}>
-      <GradientHeader 
-        title="Settings"
-        subtitle="Manage your profile and preferences"
-      />
+      <GradientHeader title="Settings" subtitle="Manage your profile and preferences" />
       <SafeAreaView style={styles.contentContainer}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Profile Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Profile</Text>
 
-        {/* Profile Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profile</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Display Name</Text>
-            <TextInput
-              style={styles.textInput}
-              value={profileName}
-              onChangeText={setProfileName}
-              placeholder="Enter your name"
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email</Text>
-            <TextInput
-              style={styles.textInput}
-              value={profileEmail}
-              onChangeText={setProfileEmail}
-              placeholder="Enter your email"
-              placeholderTextColor="#9ca3af"
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
-
-          {/* Profile Action Buttons */}
-          {hasProfileChanges && (
-            <View style={styles.profileActions}>
-              <TouchableOpacity 
-                style={styles.cancelButton} 
-                onPress={handleCancelProfileChanges}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.saveButton, isUpdatingProfile && styles.saveButtonDisabled]} 
-                onPress={handleSaveProfile}
-                disabled={isUpdatingProfile}
-              >
-                <Text style={styles.saveButtonText}>
-                  {isUpdatingProfile ? 'Saving...' : 'Save Changes'}
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Display Name</Text>
+              <TextInput
+                style={styles.textInput}
+                value={profileName}
+                onChangeText={setProfileName}
+                placeholder="Enter your name"
+                placeholderTextColor="#9ca3af"
+              />
             </View>
-          )}
-        </View>
 
-        {/* Expert Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Expert Services</Text>
-          
-          {!isExpert ? (
-            <TouchableOpacity style={styles.expertButton} onPress={handleBecomeExpert}>
-              <Text style={styles.expertButtonText}>Become an Expert</Text>
-              <Text style={styles.expertButtonSubtext}>Help others with shopping advice and earn SOL</Text>
-            </TouchableOpacity>
-          ) : (
-            <View>
-              <View style={styles.expertStatus}>
-                <Text style={styles.expertStatusText}>✅ You&apos;re registered as an expert</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <TextInput
+                style={styles.textInput}
+                value={profileEmail}
+                onChangeText={setProfileEmail}
+                placeholder="Enter your email"
+                placeholderTextColor="#9ca3af"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            {/* Profile Action Buttons */}
+            {hasProfileChanges && (
+              <View style={styles.profileActions}>
+                <TouchableOpacity style={styles.cancelButton} onPress={handleCancelProfileChanges}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveButton, isUpdatingProfile && styles.saveButtonDisabled]}
+                  onPress={handleSaveProfile}
+                  disabled={isUpdatingProfile}
+                >
+                  <Text style={styles.saveButtonText}>{isUpdatingProfile ? 'Saving...' : 'Save Changes'}</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity style={styles.manageButton} onPress={handleManageExpertProfile}>
-                <Text style={styles.manageButtonText}>Manage Expert Profile</Text>
+            )}
+          </View>
+
+          {/* Expert Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Expert Services</Text>
+
+            {!isExpert ? (
+              <TouchableOpacity style={styles.expertButton} onPress={handleBecomeExpert}>
+                <Text style={styles.expertButtonText}>Become an Expert</Text>
+                <Text style={styles.expertButtonSubtext}>Help others with shopping advice and earn SOL</Text>
               </TouchableOpacity>
+            ) : (
+              <View>
+                <View style={styles.expertStatus}>
+                  <Text style={styles.expertStatusText}>✅ You&apos;re registered as an expert</Text>
+                </View>
+                <TouchableOpacity style={styles.manageButton} onPress={handleManageExpertProfile}>
+                  <Text style={styles.manageButtonText}>Manage Expert Profile</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Wallet Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Wallet & Payments</Text>
+            <View style={styles.walletContainer}>
+              <AccountFeature />
             </View>
-          )}
-        </View>
-
-        {/* Wallet Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Wallet & Payments</Text>
-          <View style={styles.walletContainer}>
-            <AccountFeature />
           </View>
-        </View>
 
-        {/* App Preferences */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
-          
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Push Notifications</Text>
-              <Text style={styles.settingSubtitle}>Get notified about expert responses</Text>
+          {/* App Preferences */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Preferences</Text>
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Text style={styles.settingTitle}>Push Notifications</Text>
+                <Text style={styles.settingSubtitle}>Get notified about expert responses</Text>
+              </View>
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={setNotificationsEnabled}
+                trackColor={{ false: '#e5e7eb', true: '#93c5fd' }}
+                thumbColor={notificationsEnabled ? '#3b82f6' : '#9ca3af'}
+              />
             </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#e5e7eb', true: '#93c5fd' }}
-              thumbColor={notificationsEnabled ? '#3b82f6' : '#9ca3af'}
-            />
           </View>
-        </View>
 
-        {/* Session History */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>My Sessions</Text>
-          
-          <TouchableOpacity style={styles.infoRow} onPress={() => router.push('/(shopper)/sessions')}>
-            <Text style={styles.infoText}>Session History</Text>
-            <Text style={styles.infoArrow}>›</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Session History */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>My Sessions</Text>
 
-        {/* App Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          
-          <TouchableOpacity style={styles.infoRow}>
-            <Text style={styles.infoText}>Privacy Policy</Text>
-            <Text style={styles.infoArrow}>›</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.infoRow}>
-            <Text style={styles.infoText}>Terms of Service</Text>
-            <Text style={styles.infoArrow}>›</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.infoRow}>
-            <Text style={styles.infoText}>Help & Support</Text>
-            <Text style={styles.infoArrow}>›</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.versionRow}>
-            <Text style={styles.versionText}>Version 1.0.0</Text>
+            <TouchableOpacity style={styles.infoRow} onPress={() => router.push('/(shopper)/sessions')}>
+              <Text style={styles.infoText}>Session History</Text>
+              <Text style={styles.infoArrow}>›</Text>
+            </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Sign Out */}
-        <View style={styles.section}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>Sign Out</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+          {/* App Info */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About</Text>
+
+            <TouchableOpacity style={styles.infoRow}>
+              <Text style={styles.infoText}>Privacy Policy</Text>
+              <Text style={styles.infoArrow}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.infoRow}>
+              <Text style={styles.infoText}>Terms of Service</Text>
+              <Text style={styles.infoArrow}>›</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.infoRow}>
+              <Text style={styles.infoText}>Help & Support</Text>
+              <Text style={styles.infoArrow}>›</Text>
+            </TouchableOpacity>
+
+            <View style={styles.versionRow}>
+              <Text style={styles.versionText}>Version 1.0.0</Text>
+            </View>
+          </View>
+
+          {/* Sign Out */}
+          <View style={styles.section}>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <Text style={styles.logoutButtonText}>Sign Out</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   )
 }
-
 
 const styles = StyleSheet.create({
   container: {

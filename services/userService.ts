@@ -44,7 +44,7 @@ export const userService = {
   async loadWalletAddressLocally(): Promise<string | null> {
     return await AsyncStorage.getItem(STORAGE_KEYS.WALLET_ADDRESS)
   },
-  async saveUserDataLocally(user: UserCompleteProfile): Promise<void> {    
+  async saveUserDataLocally(user: UserCompleteProfile): Promise<void> {
     try {
       if (!user) {
         throw new Error('User is null or undefined')

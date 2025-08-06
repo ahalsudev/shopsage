@@ -44,4 +44,6 @@ export interface UserCompleteProfile {
   user: UserProfile
   shopperProfile?: ShopperProfile
   expertProfile?: ExpertProfile
+  availableRoles?: UserRoles['activeRole'][]
+  activeRole?: UserRoles['activeRole']
 }

@@ -1,6 +1,5 @@
 import { UserCompleteProfile } from '@/types/auth'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import axios from 'axios'
 import { log } from '../config/environment'
 import { dataProvider } from './dataProvider'
 import { userService } from './userService'
@@ -11,61 +10,56 @@ export interface ConnectWalletResponse {
 }
 
 export const authService = {
-  async connectWallet(
-    walletAddress: string,
-    name: string,
-    email: string,
-  ): Promise<ConnectWalletResponse> {
+  async logout(): Promise<void> {
     try {
-      log.info('AuthService: Registering user', {
-        walletAddress,
-        name,
-        email,
-      })
+      // Clear JWT token
+      await AsyncStorage.removeItem('token')
+      // Clear user data
+      await userService.clearUserDataLocally()
 
-      // Use data provider abstraction
-      const result = await dataProvider.registerUser(walletAddress, name, email)
-
-      // Store token locally
-      await AsyncStorage.setItem('token', result.token)      
-
-      // Save complete user data locally for persistence
-      await userService.saveUserDataLocally(result.user)
-
-      log.info('Connected user successfully:', result.user.user.name)
-
-      return result
+      log.info('User logged out successfully')
     } catch (error) {
-      log.error('Failed to connect wallet:', error)
+      log.error('Error during logout:', error)
       throw error
     }
   },
 
-  async logout(): Promise<void> {
-    await userService.clearUserDataLocally()
+  async isTokenValid(): Promise<boolean> {
+    try {
+      const token = await AsyncStorage.getItem('token')
+      if (!token) return false
+
+      // Simple JWT expiration check (decode payload)
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const currentTime = Math.floor(Date.now() / 1000)
+
+      return payload.exp > currentTime
+    } catch (error) {
+      log.error('Error checking token validity:', error)
+      return false
+    }
+  },
+
+  async refreshTokenIfNeeded(): Promise<void> {
+    try {
+      const isValid = await this.isTokenValid()
+      if (!isValid) {
+        log.info('Token expired or invalid, clearing session')
+        await this.logout()
+      }
+    } catch (error) {
+      log.error('Error refreshing token:', error)
+      await this.logout()
+    }
   },
 
   async loginUser(walletAddress: string): Promise<any> {
-    try {
-      // Use data provider abstraction
       const response = await dataProvider.loginUser(walletAddress)
-
       if (response && response.user) {
-        // User is already transformed by dataProvider
         if (response.token) {
-          // Update local storage with fresh data
           await userService.saveUserDataLocally(response.user)
         }
-
-        return response
       }
       return response
-    } catch (error) {
-      // If it's a 404 or user not found, return the status code
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        return 404
-      }
-      throw error
-    }
   },
 }

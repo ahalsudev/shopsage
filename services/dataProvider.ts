@@ -7,7 +7,11 @@ import {
 import { ExpertProfile, ShopperProfile, UserCompleteProfile, UserProfile } from '../types/auth';
 
 export interface IDataProvider {
-  registerUser(walletAddress: string, name: string, email: string): Promise<{ user: UserCompleteProfile; token: string }>
+  registerUser(
+    walletAddress: string,
+    name: string,
+    email: string,
+  ): Promise<{ user: UserCompleteProfile; token: string }>
   loginUser(walletAddress: string): Promise<{ user: UserCompleteProfile; token: string }>
 
   // New Multi-Role Profile Management
@@ -21,7 +25,7 @@ export interface IDataProvider {
   updateUserProfile(updates: Partial<UserProfile>): Promise<UserProfile>
   updateShopperProfile(updates: Partial<ShopperProfile>): Promise<ShopperProfile>
   updateExpertProfile(updates: Partial<ExpertProfile>): Promise<ExpertProfile>
-  
+
   // Expert Status Management
   updateExpertOnlineStatus(isOnline: boolean): Promise<ExpertProfile>
 
@@ -57,11 +61,11 @@ class RemoteDataProvider implements IDataProvider {
     })
 
     const AsyncStorage = await import('@react-native-async-storage/async-storage').then((m) => m.default)
-    if (response.ok && response.token) {
+
+    if (response.token) {
       await AsyncStorage.setItem('token', response.token)
     }
 
-    // Returns {"token": "eyJ0eX0...HTgh1U", "user": {"email": null, "id": "1d6c1c65-51fa-4658-b0a4-8bfccebabb51", "name": "Shopae", "userType": "shopper", "walletAddress": "9MKQ8y7W...aixxCCn"}}
     return response
   }
 
@@ -93,24 +97,29 @@ class RemoteDataProvider implements IDataProvider {
       headers,
     })
 
-    console.log(`Response: ${response.status} ${response.statusText}`)
-
+    // Check if response is ok before parsing JSON
     if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}: ${response.statusText}`
-      try {
-        const errorData = await response.json()
-        console.log('Error response body:', errorData)
-        errorMessage = errorData.error || errorData.message || errorMessage
-      } catch {
-        // If response body isn't JSON, use default message
-      }
-      throw new Error(errorMessage)
+      const text = await response.text()
+      console.error(`API call failed with status ${response.status}:`, text)
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
     }
 
-    return response.json()
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text()
+      console.error(`Expected JSON response but got ${contentType}:`, text)
+      throw new Error(`Invalid response type: expected JSON but got ${contentType}`)
+    }
+
+    return await response.json()
   }
 
-  async registerUser(walletAddress: string, name: string, email: string): Promise<{ user: UserCompleteProfile; token: string }> {
+  async registerUser(
+    walletAddress: string,
+    name: string,
+    email: string,
+  ): Promise<{ user: UserCompleteProfile; token: string }> {
     const jsonPayload = JSON.stringify({
       walletAddress,
       name,
@@ -129,7 +138,7 @@ class RemoteDataProvider implements IDataProvider {
     if (response.token) {
       await AsyncStorage.setItem('token', response.token)
     }
-    
+
     return response
   }
 
@@ -160,9 +169,9 @@ class RemoteDataProvider implements IDataProvider {
       // If sessionRate exists, also send it as hourlyRate for backend compatibility
       ...(profileData.sessionRate && { hourlyRate: profileData.sessionRate }),
     }
-    
+
     console.log('Creating expert profile with payload:', payload)
-    
+
     return this.makeApiCall('/profiles/expert', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -207,8 +216,9 @@ class RemoteDataProvider implements IDataProvider {
     return this.makeApiCall('/sessions', {
       method: 'POST',
       body: JSON.stringify({
-        expert_id: sessionData.expertId,
-        // start_time: sessionData.startTime,
+        expertId: sessionData.expertId,
+        shopperId: sessionData.shopperId,
+        startTime: sessionData.startTime,
         amount: sessionData.amount,
       }),
     })

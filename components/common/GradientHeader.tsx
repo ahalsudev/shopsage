@@ -11,12 +11,7 @@ export function GradientHeader({ title, subtitle }: GradientHeaderProps) {
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#3b82f6" />
-      <LinearGradient
-        colors={['#3b82f6', '#60faaa']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.header}
-      >
+      <LinearGradient colors={['#3b82f6', '#60faaa']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <Text style={styles.headerTitle}>{title}</Text>
         {subtitle && <Text style={styles.headerSubtitle}>{subtitle}</Text>}
       </LinearGradient>

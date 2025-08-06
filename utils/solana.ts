@@ -2,10 +2,11 @@ import { AnchorProvider, BN, Program, web3 } from '@coral-xyz/anchor'
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { Connection, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 
-import { PDA_SEEDS, PLATFORM_CONFIG, getCurrentNetwork, getProgramIds } from '../constants/programs'
-import { IDL as ExpertIDL, ShopsageExpert } from '../types/programs/shopsage-expert'
-import { IDL as PaymentIDL, ShopsagePayment } from '../types/programs/shopsage-payment'
-import { IDL as SessionIDL, ShopsageSession } from '../types/programs/shopsage-session'
+import { AppConfig } from '../config/environment'
+import { PDA_SEEDS, PLATFORM_CONFIG } from '../constants/programs'
+import { ShopsageExpert } from '../types/programs/shopsage-expert'
+import { ShopsagePayment } from '../types/programs/shopsage-payment'
+import { ShopsageSession } from '../types/programs/shopsage-session'
 
 export class SolanaUtils {
   private connection: Connection
@@ -16,31 +17,9 @@ export class SolanaUtils {
   private programIds = getProgramIds(this.currentNetwork)
 
   constructor() {
-    this.connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT, 'confirmed')
-    console.log(`[SolanaUtils] Initialized with network: ${this.currentNetwork}, RPC: ${PLATFORM_CONFIG.RPC_ENDPOINT}`)
-    console.log(`[SolanaUtils] Program IDs: ${JSON.stringify(this.programIds, null, 2)}`)
-    console.log(`[SolanaUtils] Platform config - Network: ${PLATFORM_CONFIG.NETWORK}, Cluster: ${PLATFORM_CONFIG.CLUSTER}`)
-  }
-
-  // Get current network and program IDs
-  getCurrentNetwork() {
-    return this.currentNetwork
-  }
-
-  getProgramIds() {
-    return this.programIds
-  }
-
-  getConnection() {
-    return this.connection
-  }
-
-  // Refresh network configuration (useful for development)
-  refreshNetworkConfig() {
-    this.currentNetwork = getCurrentNetwork()
-    this.programIds = getProgramIds(this.currentNetwork)
-    this.connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT, 'confirmed')
-    console.log(`[SolanaUtils] Network config refreshed: ${this.currentNetwork}`)
+    // Use AppConfig for RPC endpoint, fallback to PLATFORM_CONFIG for compatibility
+    const rpcEndpoint = AppConfig.blockchain.rpcUrl || PLATFORM_CONFIG.RPC_ENDPOINT
+    this.connection = new Connection(rpcEndpoint, 'confirmed')
   }
 
   // Initialize programs with wallet provider
@@ -642,10 +621,10 @@ export class SolanaUtils {
       return await transact(async (wallet) => {
         // Authorize the wallet
         const authResult = await wallet.authorize({
-          cluster: PLATFORM_CONFIG.CLUSTER,
+          cluster: AppConfig.blockchain.cluster || PLATFORM_CONFIG.CLUSTER,
           identity: {
             name: 'ShopSage',
-            uri: 'https://shopsage.app',
+            uri: AppConfig.uri,
             icon: 'favicon.ico',
           },
         })
@@ -690,6 +669,16 @@ export class SolanaUtils {
     try {
       const balance = await this.connection.getBalance(publicKey)
       return this.lamportsToSol(balance)
+    } catch (error) {
+      console.error('Failed to get account balance:', error)
+      return 0
+    }
+  }
+
+  async getAccountBalanceInLamports(publicKey: PublicKey): Promise<number> {
+    try {
+      const balance = await this.connection.getBalance(publicKey)
+      return balance
     } catch (error) {
       console.error('Failed to get account balance:', error)
       return 0

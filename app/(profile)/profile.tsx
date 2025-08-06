@@ -2,7 +2,7 @@ import { useAuth } from '@/components/auth/auth-provider'
 import { useCustomAlert } from '@/components/CustomAlert'
 import { router } from 'expo-router'
 import React, { useEffect, useState } from 'react'
-import { Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Modal, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { ProfileSetup } from '../../components/ProfileSetup'
 import { RoleSwitcher } from '../../components/RoleSwitcher'
 
@@ -11,6 +11,7 @@ const ProfileScreen: React.FC = () => {
   const { showAlert, AlertComponent } = useCustomAlert()
   const [showProfileSetup, setShowProfileSetup] = useState(false)
   const [setupRole, setSetupRole] = useState<'shopper' | 'expert'>('shopper')
+  const [refreshing, setRefreshing] = useState(false)
 
   // Navigate to expert screens if user has expert profile
   useEffect(() => {
@@ -55,14 +56,13 @@ const ProfileScreen: React.FC = () => {
   const currentRoleProfile = user?.activeRole === 'expert' ? user?.expertProfile : user?.shopperProfile
   const currentRoleData = {
     shopper: {
-      totalSessions: user?.shopperProfile?.consultationHistory?.totalSessions || 0,
-      totalSpent: user?.shopperProfile?.consultationHistory?.totalSpent || 0,
+      totalSessions: user?.shopperProfile?.totalSessions || 0,
+      totalSpent: user?.shopperProfile?.totalSpent || 0,
       savedExperts: user?.shopperProfile?.savedExperts?.length || 0,
     },
     expert: {
       totalConsultations: user?.expertProfile?.totalConsultations || 0,
       rating: user?.expertProfile?.rating || 0,
-      totalEarnings: user?.expertProfile?.stats?.totalEarnings || 0,
       isOnline: user?.expertProfile?.isOnline || false,
     },
   }
@@ -79,15 +79,34 @@ const ProfileScreen: React.FC = () => {
     showAlert('Help & Support', 'Help center feature coming soon!')
   }
 
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    try {
+      await syncUserData()
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView 
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#6366f1']}
+            tintColor="#6366f1"
+          />
+        }
+      >
         {/* Profile Header */}
         <View style={styles.header}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user?.profile.name?.charAt(0) || 'U'}</Text>
+            <Text style={styles.avatarText}>{user?.user.name?.charAt(0) || 'U'}</Text>
           </View>
-          <Text style={styles.name}>{user?.profile?.name || 'User'}</Text>
+          <Text style={styles.name}>{user?.user?.name || 'User'}</Text>
           <Text style={styles.userType}>{user?.activeRole === 'expert' ? 'Expert Consultant' : 'Shopper'}</Text>
           <View style={styles.roleInfo}>
             <Text style={styles.roleCount}>
@@ -95,7 +114,7 @@ const ProfileScreen: React.FC = () => {
             </Text>
           </View>
           <Text style={styles.walletAddress}>
-            {user?.profile?.walletAddress?.slice(0, 8)}...{user?.profile?.walletAddress?.slice(-8)}
+            {user?.user?.walletAddress?.slice(0, 8)}...{user?.user?.walletAddress?.slice(-8)}
           </Text>
         </View>
 
@@ -120,10 +139,7 @@ const ProfileScreen: React.FC = () => {
                   <Text style={styles.statIcon}>💼</Text>
                   <Text style={styles.statText}>Consultations: {currentRoleData.expert.totalConsultations}</Text>
                 </View>
-                <View style={styles.statRow}>
-                  <Text style={styles.statIcon}>💰</Text>
-                  <Text style={styles.statText}>Earnings: {currentRoleData.expert.totalEarnings.toFixed(4)} SOL</Text>
-                </View>
+
                 <View style={styles.statRow}>
                   <Text style={styles.statIcon}>🟢</Text>
                   <Text style={styles.statText}>Status: {currentRoleData.expert.isOnline ? 'Online' : 'Offline'}</Text>

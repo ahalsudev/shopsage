@@ -21,7 +21,7 @@ export const expertService = {
   async createProfile(profileData: CreateExpertProfileRequest): Promise<ExpertProfile> {
     try {
       // const response = await api.post('/profiles/expert', profileData)
-      const response = await dataProvider.createExpertProfile(profileData);
+      const response = await dataProvider.createExpertProfile(profileData)
       return response
     } catch (error) {
       throw error

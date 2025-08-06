@@ -10,11 +10,11 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ style }) => {
   const { user, switchRole } = useAuth()
   const [switching, setSwitching] = useState(false)
 
-  if (!user || user.availableRoles.length <= 1) {
+  if (!user || !user.availableRoles || user.availableRoles.length <= 1) {
     return null // Don't show if user doesn't have multiple roles
   }
 
-  const handleRoleSwitch = async (role: 'shopper' | 'expert') => {
+  const handleRoleSwitch = async (role: 'shopper' | 'expert' | 'dual' | 'none') => {
     if (role === user.activeRole) return
 
     try {
@@ -27,12 +27,34 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({ style }) => {
     }
   }
 
-  const getRoleLabel = (role: 'shopper' | 'expert') => {
-    return role === 'shopper' ? 'Shopper' : 'Expert'
+  const getRoleLabel = (role: 'shopper' | 'expert' | 'dual' | 'none') => {
+    switch (role) {
+      case 'shopper':
+        return 'Shopper'
+      case 'expert':
+        return 'Expert'
+      case 'dual':
+        return 'Both'
+      case 'none':
+        return 'None'
+      default:
+        return 'Unknown'
+    }
   }
 
-  const getRoleIcon = (role: 'shopper' | 'expert') => {
-    return role === 'shopper' ? '🛍️' : '👨‍💼'
+  const getRoleIcon = (role: 'shopper' | 'expert' | 'dual' | 'none') => {
+    switch (role) {
+      case 'shopper':
+        return '🛍️'
+      case 'expert':
+        return '👨‍💼'
+      case 'dual':
+        return '🤝'
+      case 'none':
+        return '❓'
+      default:
+        return ''
+    }
   }
 
   return (
