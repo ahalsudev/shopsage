@@ -3,6 +3,7 @@ import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { Connection, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 
 import { PDA_SEEDS, PLATFORM_CONFIG, PROGRAM_IDS } from '../constants/programs'
+import { AppConfig } from '../config/environment'
 import { IDL as ExpertIDL, ShopsageExpert } from '../types/programs/shopsage-expert'
 import { IDL as PaymentIDL, ShopsagePayment } from '../types/programs/shopsage-payment'
 import { IDL as SessionIDL, ShopsageSession } from '../types/programs/shopsage-session'
@@ -14,7 +15,9 @@ export class SolanaUtils {
   private expertProgram: Program<ShopsageExpert> | null = null
 
   constructor() {
-    this.connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT, 'confirmed')
+    // Use AppConfig for RPC endpoint, fallback to PLATFORM_CONFIG for compatibility
+    const rpcEndpoint = AppConfig.blockchain.rpcUrl || PLATFORM_CONFIG.RPC_ENDPOINT
+    this.connection = new Connection(rpcEndpoint, 'confirmed')
   }
 
   // Initialize programs with wallet provider
@@ -268,10 +271,10 @@ export class SolanaUtils {
       return await transact(async (wallet) => {
         // Authorize the wallet
         const authResult = await wallet.authorize({
-          cluster: PLATFORM_CONFIG.CLUSTER,
+          cluster: AppConfig.blockchain.cluster || PLATFORM_CONFIG.CLUSTER,
           identity: {
             name: 'ShopSage',
-            uri: 'https://shopsage.app',
+            uri: AppConfig.uri,
             icon: 'favicon.ico',
           },
         })
@@ -316,6 +319,16 @@ export class SolanaUtils {
     try {
       const balance = await this.connection.getBalance(publicKey)
       return this.lamportsToSol(balance)
+    } catch (error) {
+      console.error('Failed to get account balance:', error)
+      return 0
+    }
+  }
+
+  async getAccountBalanceInLamports(publicKey: PublicKey): Promise<number> {
+    try {
+      const balance = await this.connection.getBalance(publicKey)
+      return balance
     } catch (error) {
       console.error('Failed to get account balance:', error)
       return 0

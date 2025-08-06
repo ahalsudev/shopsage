@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for transforming backend responses to frontend types
  */

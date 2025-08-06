@@ -38,7 +38,7 @@ const SessionsScreen: React.FC = () => {
   useFocusEffect(
     useCallback(() => {
       loadSessions(true)
-    }, [])
+    }, []),
   )
 
   const loadSessions = async (isRefresh = false) => {
@@ -57,11 +57,11 @@ const SessionsScreen: React.FC = () => {
         sessionData = await sessionService.getUserSessions()
       } catch (apiError) {
         console.warn('Failed to load sessions from API, trying local storage:', apiError)
-        
+
         // Fallback to local storage
         const localSessions = await localSessionStorage.getSessions()
         sessionData = await Promise.all(
-          localSessions.map(localSession => localSessionStorage.convertToSessionWithDetails(localSession))
+          localSessions.map((localSession) => localSessionStorage.convertToSessionWithDetails(localSession)),
         )
       }
 
@@ -72,9 +72,9 @@ const SessionsScreen: React.FC = () => {
         expertName: session.expertName || 'Unknown Expert',
         expertSpecialization: session.expertSpecialization || 'General',
         date: session.startTime,
-        duration: session.endTime ? 
-          Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / (1000 * 60)) : 
-          5, // Calculate actual duration or default to 5 minutes
+        duration: session.endTime
+          ? Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / (1000 * 60))
+          : 5, // Calculate actual duration or default to 5 minutes
         status: mapSessionStatus(session.status),
         cost: parseFloat(session.amount || '0'),
         // TODO: Add rating and review from backend when implemented
@@ -203,10 +203,7 @@ const SessionsScreen: React.FC = () => {
 
   const renderSessionCard = ({ item }: { item: Session }) => (
     <TouchableOpacity style={styles.sessionCard} onPress={() => handleSessionPress(item)}>
-      <LinearGradient
-        colors={['#fefefe', '#f8fafc']}
-        style={styles.sessionCardGradient}
-      >
+      <LinearGradient colors={['#fefefe', '#f8fafc']} style={styles.sessionCardGradient}>
         <View style={styles.sessionHeader}>
           <View style={styles.sessionInfo}>
             <Text style={styles.expertName}>{item.expertName}</Text>
@@ -221,39 +218,39 @@ const SessionsScreen: React.FC = () => {
           </View>
         </View>
 
-      <View style={styles.sessionDetails}>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Duration:</Text>
-          <Text style={styles.detailValue}>{item.duration} min</Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailLabel}>Cost:</Text>
-          <Text style={styles.detailValue}>{item.cost} SOL</Text>
-        </View>
-        {item.rating && (
+        <View style={styles.sessionDetails}>
           <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Rating:</Text>
-            <Text style={styles.detailValue}>{'P'.repeat(item.rating)}</Text>
+            <Text style={styles.detailLabel}>Duration:</Text>
+            <Text style={styles.detailValue}>{item.duration} min</Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Cost:</Text>
+            <Text style={styles.detailValue}>{item.cost} SOL</Text>
+          </View>
+          {item.rating && (
+            <View style={styles.detailItem}>
+              <Text style={styles.detailLabel}>Rating:</Text>
+              <Text style={styles.detailValue}>{'P'.repeat(item.rating)}</Text>
+            </View>
+          )}
+        </View>
+
+        {item.review && (
+          <View style={styles.reviewContainer}>
+            <Text style={styles.reviewText}>&quot;{item.review}&quot;</Text>
           </View>
         )}
-      </View>
 
-      {item.review && (
-        <View style={styles.reviewContainer}>
-          <Text style={styles.reviewText}>"{item.review}"</Text>
-        </View>
-      )}
-
-      {(item.status === 'upcoming' || item.status === 'pending') && (
-        <View style={styles.actionContainer}>
-          <Text style={styles.actionText}>Tap to join session</Text>
-        </View>
-      )}
-      {item.status === 'active' && (
-        <View style={[styles.actionContainer, { backgroundColor: '#f59e0b' }]}>
-          <Text style={styles.actionText}>Tap to rejoin session</Text>
-        </View>
-      )}
+        {(item.status === 'upcoming' || item.status === 'pending') && (
+          <View style={styles.actionContainer}>
+            <Text style={styles.actionText}>Tap to join session</Text>
+          </View>
+        )}
+        {item.status === 'active' && (
+          <View style={[styles.actionContainer, { backgroundColor: '#f59e0b' }]}>
+            <Text style={styles.actionText}>Tap to rejoin session</Text>
+          </View>
+        )}
       </LinearGradient>
     </TouchableOpacity>
   )
@@ -261,10 +258,7 @@ const SessionsScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <GradientHeader 
-          title="My Sessions"
-          subtitle="Your consultation history"
-        />
+        <GradientHeader title="My Sessions" subtitle="Your consultation history" />
         <SafeAreaView style={styles.contentContainer}>
           <LoadingSpinner message="Loading your sessions..." />
         </SafeAreaView>
@@ -275,10 +269,7 @@ const SessionsScreen: React.FC = () => {
   if (error && sessions.length === 0) {
     return (
       <View style={styles.container}>
-        <GradientHeader 
-          title="My Sessions"
-          subtitle="Your consultation history"
-        />
+        <GradientHeader title="My Sessions" subtitle="Your consultation history" />
         <SafeAreaView style={styles.contentContainer}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
@@ -296,10 +287,7 @@ const SessionsScreen: React.FC = () => {
   return (
     <ErrorBoundary>
       <View style={styles.container}>
-        <GradientHeader 
-          title="My Sessions"
-          subtitle="Your consultation history"
-        />
+        <GradientHeader title="My Sessions" subtitle="Your consultation history" />
         <SafeAreaView style={styles.contentContainer}>
           {error && sessions.length > 0 && (
             <View style={styles.errorBanner}>
@@ -311,7 +299,7 @@ const SessionsScreen: React.FC = () => {
               <Text style={styles.emptyIcon}>📅</Text>
               <Text style={styles.emptyTitle}>No Sessions Yet</Text>
               <Text style={styles.emptyText}>
-                You haven't booked any consultation sessions yet. Start by finding an expert!
+                You haven&apos;t booked any consultation sessions yet. Start by finding an expert!
               </Text>
               <TouchableOpacity style={styles.emptyButton} onPress={() => router.push('/(tabs)/explore')}>
                 <Text style={styles.emptyButtonText}>Find Experts</Text>

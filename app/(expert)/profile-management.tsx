@@ -12,6 +12,7 @@ import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -32,6 +33,7 @@ const ExpertProfileManagementScreen: React.FC = () => {
   const { currentUserProfile, profileLoading, profileError } = useSelector((state: RootState) => state.experts)
 
   const [isEditing, setIsEditing] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   // Form state
   const [specialization, setSpecialization] = useState('')
@@ -122,13 +124,19 @@ const ExpertProfileManagementScreen: React.FC = () => {
     setIsEditing(false)
   }
 
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    try {
+      await dispatch(fetchCurrentUserProfile())
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   if (profileLoading) {
     return (
       <View style={styles.container}>
-        <GradientHeader 
-          title="Expert Profile"
-          subtitle="Manage your expert profile and settings"
-        />
+        <GradientHeader title="Expert Profile" subtitle="Manage your expert profile and settings" />
         <SafeAreaView style={styles.contentContainer}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#6366f1" />
@@ -142,10 +150,7 @@ const ExpertProfileManagementScreen: React.FC = () => {
   if (profileError) {
     return (
       <View style={styles.container}>
-        <GradientHeader 
-          title="Expert Profile"
-          subtitle="Manage your expert profile and settings"
-        />
+        <GradientHeader title="Expert Profile" subtitle="Manage your expert profile and settings" />
         <SafeAreaView style={styles.contentContainer}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
@@ -163,10 +168,7 @@ const ExpertProfileManagementScreen: React.FC = () => {
   if (!currentUserProfile && !profileLoading) {
     return (
       <View style={styles.container}>
-        <GradientHeader 
-          title="Expert Profile"
-          subtitle="Manage your expert profile and settings"
-        />
+        <GradientHeader title="Expert Profile" subtitle="Manage your expert profile and settings" />
         <SafeAreaView style={styles.contentContainer}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>👨‍💼</Text>
@@ -186,147 +188,154 @@ const ExpertProfileManagementScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <GradientHeader 
-        title="Expert Profile"
-        subtitle="Manage your expert profile and settings"
-      />
+      <GradientHeader title="Expert Profile" subtitle="Manage your expert profile and settings" />
       <SafeAreaView style={styles.contentContainer}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.content}>
-          {/* Edit Button */}
-          <View style={styles.editButtonContainer}>
-            <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(!isEditing)}>
-              <Text style={styles.editButtonText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Profile Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{currentUserProfile?.rating?.toFixed(1)}</Text>
-              <Text style={styles.statLabel}>Rating</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{currentUserProfile?.totalConsultations}</Text>
-              <Text style={styles.statLabel}>Consultations</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{currentUserProfile?.isVerified ? '✓' : '✗'}</Text>
-              <Text style={styles.statLabel}>Verified</Text>
-            </View>
-          </View>
-
-          {/* Online Status Toggle */}
-          <View style={styles.onlineContainer}>
-            <Text style={styles.onlineLabel}>Online Status</Text>
-            <Switch
-              value={isOnline}
-              onValueChange={handleToggleOnlineStatus}
-              trackColor={{ false: '#767577', true: '#6366f1' }}
-              thumbColor={isOnline ? '#ffffff' : '#f4f3f4'}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={['#6366f1']}
+              tintColor="#6366f1"
             />
-          </View>
+          }
+        >
+          <View style={styles.content}>
+            {/* Edit Button */}
+            <View style={styles.editButtonContainer}>
+              <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(!isEditing)}>
+                <Text style={styles.editButtonText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Profile Form */}
-          {isEditing ? (
-            <>
-              {/* Specialization Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Specialization *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={specialization}
-                  onChangeText={setSpecialization}
-                  placeholder="e.g., Tech Support, Fashion Advice"
-                  placeholderTextColor="#9ca3af"
-                />
+            {/* Profile Stats */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{currentUserProfile?.rating?.toFixed(1)}</Text>
+                <Text style={styles.statLabel}>Rating</Text>
               </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{currentUserProfile?.totalConsultations}</Text>
+                <Text style={styles.statLabel}>Consultations</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{currentUserProfile?.isVerified ? '✓' : '✗'}</Text>
+                <Text style={styles.statLabel}>Verified</Text>
+              </View>
+            </View>
 
-              {/* Bio Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Bio</Text>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={bio}
-                  onChangeText={setBio}
-                  placeholder="Tell shoppers about your expertise"
-                  placeholderTextColor="#9ca3af"
-                  multiline
-                  numberOfLines={4}
-                />
-              </View>
+            {/* Online Status Toggle */}
+            <View style={styles.onlineContainer}>
+              <Text style={styles.onlineLabel}>Online Status</Text>
+              <Switch
+                value={isOnline}
+                onValueChange={handleToggleOnlineStatus}
+                trackColor={{ false: '#767577', true: '#6366f1' }}
+                thumbColor={isOnline ? '#ffffff' : '#f4f3f4'}
+              />
+            </View>
 
-              {/* Session Rate Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Session Rate (SOL) *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={sessionRate}
-                  onChangeText={setsessionRate}
-                  placeholder="0.05"
-                  placeholderTextColor="#9ca3af"
-                  keyboardType="decimal-pad"
-                />
-              </View>
-
-              {/* Profile Image URL Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Profile Image URL</Text>
-                <TextInput
-                  style={styles.input}
-                  value={profileImageUrl}
-                  onChangeText={setProfileImageUrl}
-                  placeholder="https://example.com/photo.jpg"
-                  placeholderTextColor="#9ca3af"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.saveButton, profileLoading && styles.saveButtonDisabled]}
-                  onPress={handleSaveProfile}
-                  disabled={profileLoading}
-                >
-                  <Text style={styles.saveButtonText}>{profileLoading ? 'Saving...' : 'Save Changes'}</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <>
-              {/* Profile Display */}
-              <View style={styles.profileSection}>
-                <View style={styles.profileField}>
-                  <Text style={styles.fieldLabel}>Specialization</Text>
-                  <Text style={styles.fieldValue}>{currentUserProfile?.specialization}</Text>
+            {/* Profile Form */}
+            {isEditing ? (
+              <>
+                {/* Specialization Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Specialization *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={specialization}
+                    onChangeText={setSpecialization}
+                    placeholder="e.g., Tech Support, Fashion Advice"
+                    placeholderTextColor="#9ca3af"
+                  />
                 </View>
 
-                <View style={styles.profileField}>
-                  <Text style={styles.fieldLabel}>Bio</Text>
-                  <Text style={styles.fieldValue}>{currentUserProfile?.bio || 'No bio provided'}</Text>
+                {/* Bio Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Bio</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={bio}
+                    onChangeText={setBio}
+                    placeholder="Tell shoppers about your expertise"
+                    placeholderTextColor="#9ca3af"
+                    multiline
+                    numberOfLines={4}
+                  />
                 </View>
 
-                <View style={styles.profileField}>
-                  <Text style={styles.fieldLabel}>Session Rate</Text>
-                  <Text style={styles.fieldValue}>
-                    {(currentUserProfile?.sessionRate || (currentUserProfile as any)?.hourlyRate || 0)} SOL
-                  </Text>
+                {/* Session Rate Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Session Rate (SOL) *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={sessionRate}
+                    onChangeText={setsessionRate}
+                    placeholder="0.05"
+                    placeholderTextColor="#9ca3af"
+                    keyboardType="decimal-pad"
+                  />
                 </View>
 
-                <View style={styles.profileField}>
-                  <Text style={styles.fieldLabel}>Status</Text>
-                  <Text style={[styles.fieldValue, { color: currentUserProfile?.isOnline ? '#10b981' : '#ef4444' }]}>
-                    {currentUserProfile?.isOnline ? 'Online' : 'Offline'}
-                  </Text>
+                {/* Profile Image URL Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Profile Image URL</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={profileImageUrl}
+                    onChangeText={setProfileImageUrl}
+                    placeholder="https://example.com/photo.jpg"
+                    placeholderTextColor="#9ca3af"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
                 </View>
-              </View>
-            </>
-          )}
+
+                {/* Action Buttons */}
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.saveButton, profileLoading && styles.saveButtonDisabled]}
+                    onPress={handleSaveProfile}
+                    disabled={profileLoading}
+                  >
+                    <Text style={styles.saveButtonText}>{profileLoading ? 'Saving...' : 'Save Changes'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* Profile Display */}
+                <View style={styles.profileSection}>
+                  <View style={styles.profileField}>
+                    <Text style={styles.fieldLabel}>Specialization</Text>
+                    <Text style={styles.fieldValue}>{currentUserProfile?.specialization}</Text>
+                  </View>
+
+                  <View style={styles.profileField}>
+                    <Text style={styles.fieldLabel}>Bio</Text>
+                    <Text style={styles.fieldValue}>{currentUserProfile?.bio || 'No bio provided'}</Text>
+                  </View>
+
+                  <View style={styles.profileField}>
+                    <Text style={styles.fieldLabel}>Session Rate</Text>
+                    <Text style={styles.fieldValue}>
+                      {currentUserProfile?.sessionRate || (currentUserProfile as any)?.hourlyRate || 0} SOL
+                    </Text>
+                  </View>
+
+                  <View style={styles.profileField}>
+                    <Text style={styles.fieldLabel}>Status</Text>
+                    <Text style={[styles.fieldValue, { color: currentUserProfile?.isOnline ? '#10b981' : '#ef4444' }]}>
+                      {currentUserProfile?.isOnline ? 'Online' : 'Offline'}
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>

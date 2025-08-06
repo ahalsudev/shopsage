@@ -8,8 +8,8 @@ export default function ProfileLayout() {
       }}
     >
       <Stack.Screen name="home" />
-      <Stack.Screen name="expert-onboarding" />
-      <Stack.Screen name="shopper-onboarding" />
+      {/* <Stack.Screen name="expert-onboarding" />
+      <Stack.Screen name="shopper-onboarding" /> */}
     </Stack>
   )
 }

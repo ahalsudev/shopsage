@@ -4,11 +4,20 @@ import { GradientHeader } from '@/components/common/GradientHeader'
 import { videoCallNavigation } from '@/utils/videoCallNavigation'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native'
 
 interface Expert {
   id: string
-  name: string
+  name?: string
   specialization: string
   bio: string
   sessionRate: number
@@ -37,12 +46,12 @@ const ExpertDetailScreen: React.FC = () => {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       const { expertService } = await import('@/services/expertService')
       const expertData = await expertService.getExpertById(expertId as string)
-      
+
       console.log('Loaded expert data:', expertData)
-      
+
       if (!expertData) {
         throw new Error('Expert not found')
       }
@@ -59,9 +68,9 @@ const ExpertDetailScreen: React.FC = () => {
         isVerified: expertData.isVerified || false,
         isOnline: expertData.isOnline || false,
         avatar: '👨‍💼', // Default avatar
-        bgColor: '#6366f1' // Default color
+        bgColor: '#6366f1', // Default color
       }
-      
+
       setExpert(transformedExpert)
     } catch (error) {
       console.error('Failed to load expert:', error)
@@ -73,7 +82,7 @@ const ExpertDetailScreen: React.FC = () => {
 
   const handleBookConsultation = async () => {
     if (!expert) return
-    
+
     showAlert('Book Consultation', `Book a 5-minute consultation with ${expert.name} for ${expert.sessionRate} SOL?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -89,18 +98,18 @@ const ExpertDetailScreen: React.FC = () => {
             const AsyncStorage = await import('@react-native-async-storage/async-storage').then((m) => m.default)
             const token = await AsyncStorage.getItem('token')
             console.log('Auth token available:', !!token)
-            
+
             if (!token) {
               Alert.alert(
-                'Authentication Required', 
+                'Authentication Required',
                 'You need to log in to book a consultation. Would you like to log in now?',
                 [
                   { text: 'Cancel', style: 'cancel' },
-                  { 
-                    text: 'Log In', 
-                    onPress: () => router.push('/(auth)/connect-wallet')
-                  }
-                ]
+                  {
+                    text: 'Log In',
+                    onPress: () => router.push('/(auth)/connect-wallet'),
+                  },
+                ],
               )
               return
             }
@@ -114,13 +123,17 @@ const ExpertDetailScreen: React.FC = () => {
 
             // First create a session in the backend
             const { sessionService } = await import('@/services/sessionService')
-            
+
             const sessionData = {
               expertId: expertId as string,
+              shopperId: user.user.id as string,
               startTime: new Date().toISOString(),
-              amount: expert.sessionRate.toString()
+              amount: expert.sessionRate.toString(),
             }
+
+            console.log(sessionData);
             
+
             console.log('Creating session with data:', sessionData)
             console.log('User data:', user.user)
             const session = await sessionService.createSession(sessionData)
@@ -134,7 +147,8 @@ const ExpertDetailScreen: React.FC = () => {
             })
           } catch (error) {
             console.error('Failed to start video call:', error)
-            const errorMessage = error instanceof Error ? error.message : 'Failed to start video call. Please try again.'
+            const errorMessage =
+              error instanceof Error ? error.message : 'Failed to start video call. Please try again.'
             Alert.alert('Error', errorMessage)
           }
         },
@@ -145,10 +159,7 @@ const ExpertDetailScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <GradientHeader 
-          title="Loading Expert..."
-          subtitle="Please wait"
-        />
+        <GradientHeader title="Loading Expert..." subtitle="Please wait" />
         <SafeAreaView style={styles.contentContainer}>
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#6366f1" />
@@ -162,10 +173,7 @@ const ExpertDetailScreen: React.FC = () => {
   if (error || !expert) {
     return (
       <View style={styles.container}>
-        <GradientHeader 
-          title="Expert Not Found"
-          subtitle="Unable to load expert details"
-        />
+        <GradientHeader title="Expert Not Found" subtitle="Unable to load expert details" />
         <SafeAreaView style={styles.contentContainer}>
           <View style={styles.errorContainer}>
             <Text style={styles.errorIcon}>⚠️</Text>
@@ -185,80 +193,79 @@ const ExpertDetailScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <GradientHeader 
-        title={expert.name}
-        subtitle={`${expert.specialization} Expert`}
-      />
+      <GradientHeader title={expert.name} subtitle={`${expert.specialization} Expert`} />
       <SafeAreaView style={styles.contentContainer}>
         <ScrollView style={styles.scrollView}>
           {/* Expert Header */}
           <View style={styles.header}>
-          <View style={styles.profileSection}>
-            <View style={[styles.avatar, { backgroundColor: expert.bgColor }]}>
-              <Text style={styles.avatarText}>{expert.avatar}</Text>
-            </View>
-            <View style={styles.profileInfo}>
-              <Text style={styles.expertName}>{expert.name}</Text>
-              <Text style={styles.specialization}>{expert.specialization}</Text>
-              <View style={styles.statusContainer}>
-                <View style={[styles.statusIndicator, { backgroundColor: expert.isOnline ? '#10b981' : '#6b7280' }]} />
-                <Text style={styles.statusText}>{expert.isOnline ? 'Online' : 'Offline'}</Text>
+            <View style={styles.profileSection}>
+              <View style={[styles.avatar, { backgroundColor: expert.bgColor }]}>
+                <Text style={styles.avatarText}>{expert.avatar}</Text>
+              </View>
+              <View style={styles.profileInfo}>
+                <Text style={styles.expertName}>{expert.name}</Text>
+                <Text style={styles.specialization}>{expert.specialization}</Text>
+                <View style={styles.statusContainer}>
+                  <View
+                    style={[styles.statusIndicator, { backgroundColor: expert.isOnline ? '#10b981' : '#6b7280' }]}
+                  />
+                  <Text style={styles.statusText}>{expert.isOnline ? 'Online' : 'Offline'}</Text>
+                </View>
               </View>
             </View>
           </View>
-        </View>
 
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.stat}>
-            <Text style={styles.statNumber}>⭐ {expert.rating}</Text>
-            <Text style={styles.statLabel}>Rating</Text>
-          </View>
-          <View style={styles.stat}>
-            <Text style={styles.statNumber}>{expert.totalConsultations}</Text>
-            <Text style={styles.statLabel}>Sessions</Text>
-          </View>
-          <View style={styles.stat}>
-            <Text style={styles.statNumber}>{expert.sessionRate} SOL</Text>
-            <Text style={styles.statLabel}>Per Session</Text>
-          </View>
-        </View>
-
-        {/* Bio */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.bioText}>{expert.bio}</Text>
-        </View>
-
-        {/* Consultation Info */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Consultation Details</Text>
-          <View style={styles.consultationInfo}>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Duration:</Text>
-              <Text style={styles.infoValue}>5 minutes</Text>
+          {/* Stats */}
+          <View style={styles.statsContainer}>
+            <View style={styles.stat}>
+              <Text style={styles.statNumber}>⭐ {expert.rating}</Text>
+              <Text style={styles.statLabel}>Rating</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Price:</Text>
-              <Text style={styles.infoValue}>{expert.sessionRate} SOL</Text>
+            <View style={styles.stat}>
+              <Text style={styles.statNumber}>{expert.totalConsultations}</Text>
+              <Text style={styles.statLabel}>Sessions</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Payment:</Text>
-              <Text style={styles.infoValue}>Solana blockchain</Text>
+            <View style={styles.stat}>
+              <Text style={styles.statNumber}>{expert.sessionRate} SOL</Text>
+              <Text style={styles.statLabel}>Per Session</Text>
             </View>
           </View>
-        </View>
 
-        {/* Book Button */}
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.bookButton, !expert.isOnline && styles.bookButtonDisabled]}
-            onPress={handleBookConsultation}
-            disabled={!expert.isOnline}
-          >
-            <Text style={styles.bookButtonText}>{expert.isOnline ? 'Book Consultation' : 'Currently Offline'}</Text>
-          </TouchableOpacity>
-        </View>
+          {/* Bio */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>About</Text>
+            <Text style={styles.bioText}>{expert.bio}</Text>
+          </View>
+
+          {/* Consultation Info */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Consultation Details</Text>
+            <View style={styles.consultationInfo}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Duration:</Text>
+                <Text style={styles.infoValue}>5 minutes</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Price:</Text>
+                <Text style={styles.infoValue}>{expert.sessionRate} SOL</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Payment:</Text>
+                <Text style={styles.infoValue}>Solana blockchain</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Book Button */}
+          <View style={styles.buttonContainer}>
+            <TouchableOpacity
+              style={[styles.bookButton, !expert.isOnline && styles.bookButtonDisabled]}
+              onPress={handleBookConsultation}
+              disabled={!expert.isOnline}
+            >
+              <Text style={styles.bookButtonText}>{expert.isOnline ? 'Book Consultation' : 'Currently Offline'}</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
         {AlertComponent}
       </SafeAreaView>

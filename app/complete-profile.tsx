@@ -32,7 +32,7 @@ export default function CompleteProfile() {
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Registration timeout - backend may be unavailable')), 10000),
         )
-  
+
         let response = await Promise.race([registrationPromise, timeoutPromise])
         let user = response.user
         console.log('Registration successful:', user, response.token)

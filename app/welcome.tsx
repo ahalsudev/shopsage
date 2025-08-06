@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router'
 import React from 'react'
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native'
 import 'react-native-reanimated'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
@@ -16,9 +16,7 @@ export default function WelcomeScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Logo Section */}
         <View style={styles.logoSection}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoIcon}>🛍️</Text>
-          </View>
+          <Image source={require('../assets/images/ShopSage Logo.png')} style={styles.logoImage} resizeMode="contain" />
           <Text style={styles.appName}>ShopSage</Text>
           <Text style={styles.tagline}>Expert Consultation Marketplace</Text>
         </View>
@@ -74,25 +72,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 60,
   },
-  logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#6366f1',
-    justifyContent: 'center',
-    alignItems: 'center',
+  logoImage: {
+    width: 150,
+    height: 150,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  logoIcon: {
-    fontSize: 48,
   },
   appName: {
     fontSize: 32,
@@ -108,12 +91,16 @@ const styles = StyleSheet.create({
   featuresSection: {
     width: '100%',
     marginBottom: 60,
+    alignItems: 'center',
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
     paddingHorizontal: 20,
+    width: '100%',
+    maxWidth: 300,
   },
   featureIcon: {
     fontSize: 24,
@@ -124,6 +111,7 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontWeight: '500',
     flex: 1,
+    textAlign: 'left',
   },
   getStartedButton: {
     backgroundColor: '#6366f1',

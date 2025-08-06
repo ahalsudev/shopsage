@@ -1,5 +1,5 @@
-import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { SignInPayload } from '@solana-mobile/mobile-wallet-adapter-protocol'
+import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { Transaction, TransactionSignature, VersionedTransaction } from '@solana/web3.js'
 import { useCallback, useMemo } from 'react'
 import { Account, useAuthorization } from './use-authorization'
@@ -17,12 +17,9 @@ export function useMobileWallet() {
     async (signInPayload: SignInPayload): Promise<Account> => {
       console.log('useMobileWallet.signIn called with:', signInPayload)
       try {
-        const result = await transact(async (wallet) => {
-          console.log('transact callback called, wallet:', wallet)
+        return await transact(async (wallet) => {
           return await authorizeSessionWithSignIn(wallet, signInPayload)
         })
-        console.log('signIn successful:', result)
-        return result
       } catch (error) {
         console.error('signIn failed:', error)
         throw error

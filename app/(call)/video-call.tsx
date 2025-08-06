@@ -16,7 +16,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import {
   Alert,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -27,8 +26,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-
-const { width, height } = Dimensions.get('window')
 
 interface ChatMessage {
   id: string
@@ -67,7 +64,7 @@ const VideoCallContent: React.FC = () => {
         log.info('Successfully joined call')
 
         // Record session start if sessionId is provided
-        if (sessionId && user?.profile?.id) {
+        if (sessionId && user?.user?.id) {
           try {
             // Try to start session via API first
             await sessionService.startSession(sessionId)
@@ -78,11 +75,7 @@ const VideoCallContent: React.FC = () => {
 
           // Always save to local storage as backup
           try {
-            await localSessionStorage.createSessionFromCall(
-              sessionId, 
-              expertId || 'unknown', 
-              user.profile.id
-            )
+            await localSessionStorage.createSessionFromCall(sessionId, expertId || 'unknown', user.user.id)
             log.info('Session saved to local storage:', sessionId)
           } catch (localError) {
             log.warn('Failed to save session locally:', localError)
@@ -132,7 +125,7 @@ const VideoCallContent: React.FC = () => {
         const newMessage: ChatMessage = {
           id: Date.now().toString(),
           text: event.reaction.custom?.message || '',
-          user: { name: event.user?.name || user?.profile?.name || 'You' },
+          user: { name: event.user?.name || user?.user?.name || 'You' },
           timestamp: new Date(),
         }
         setChatMessages((prev) => [...prev, newMessage])
@@ -144,7 +137,7 @@ const VideoCallContent: React.FC = () => {
             text: newMessage.text,
             user: {
               id: event.user?.id || 'unknown',
-              name: event.user?.name || 'Unknown User',
+              name: event.user?.name || user?.user?.name || 'Unknown User',
             },
             timestamp: newMessage.timestamp,
             sessionId: sessionId,
@@ -168,18 +161,18 @@ const VideoCallContent: React.FC = () => {
     if (callingState !== 'joined') return
 
     const timer = setInterval(() => {
-      setTimeRemaining(prev => {
+      setTimeRemaining((prev) => {
         if (prev <= 1) {
           // Time's up - end call
           handleEndCall()
           return 0
         }
-        
+
         // Show extension dialog at 30 seconds remaining
         if (prev === 30 && !callExtended && !showExtensionDialog) {
           setShowExtensionDialog(true)
         }
-        
+
         return prev - 1
       })
     }, 1000)
@@ -198,18 +191,24 @@ const VideoCallContent: React.FC = () => {
       'Extend Call',
       'Would you like to extend this call for another 5 minutes? Both participants must agree.',
       [
-        { text: 'No, End Call', onPress: () => { setShowExtensionDialog(false); handleEndCall() } },
-        { 
-          text: 'Yes, Extend', 
+        {
+          text: 'No, End Call',
+          onPress: () => {
+            setShowExtensionDialog(false)
+            handleEndCall()
+          },
+        },
+        {
+          text: 'Yes, Extend',
           onPress: () => {
             setTimeRemaining(300) // Reset to 5 minutes
             setCallExtended(true)
             setShowExtensionDialog(false)
             // In real implementation, this would notify the other participant
             Alert.alert('Call Extended', 'Call has been extended for another 5 minutes.')
-          }
-        }
-      ]
+          },
+        },
+      ],
     )
   }
 
@@ -274,7 +273,7 @@ const VideoCallContent: React.FC = () => {
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
@@ -314,16 +313,14 @@ const VideoCallContent: React.FC = () => {
               </Text>
             </View>
 
-            <ScrollView 
-              style={styles.chatMessages} 
+            <ScrollView
+              style={styles.chatMessages}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
               {chatMessages.map((message) => (
                 <View key={message.id} style={styles.messageContainer}>
-                  <Text style={styles.messageSender}>
-                    {message.user?.name || user?.profile?.name || 'You'}
-                  </Text>
+                  <Text style={styles.messageSender}>{message.user?.name || user?.user?.name || 'You'}</Text>
                   <Text style={styles.messageText}>{message.text}</Text>
                   <Text style={styles.messageTime}>{message.timestamp.toLocaleTimeString()}</Text>
                 </View>

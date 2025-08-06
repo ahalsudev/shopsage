@@ -1,69 +1,28 @@
 import { useAuth } from '@/components/auth/auth-provider'
 import { authService } from '@/services/authService'
-import { userService } from '@/services/userService'
 import { useRouter } from 'expo-router'
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useState } from 'react'
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 export default function ConnectWalletScreen() {
-  const { signIn, isLoading, updateUser } = useAuth()
+  const { isLoading, signIn } = useAuth()
   const router = useRouter()
+  const [signingMessage] = useState(false)
 
   const handleConnect = async () => {
-    try {
-      // First check if user data exists locally (they haven't logged out)
-      const existingUserData = await userService.loadUserDataLocally()
+    let account = await signIn()
+    const walletAddress = account.publicKey.toString()
 
-      // Connect wallet to get account
-      let account = await signIn()
-      const walletAddress = account.publicKey.toString()
-
-      if (existingUserData && existingUserData.user.walletAddress === walletAddress) {
-        // User has local data for this wallet - just login with backend and redirect
-        console.log('Found existing user data locally, logging in...')
-        try {
-          const loginResponse = await authService.loginUser(walletAddress)
-          if (loginResponse !== 404) {
-            // Update local data with any backend changes
-            await updateUser(loginResponse.user)
-            router.push('/(tabs)/explore')
-            return
-          }
-        } catch (error) {
-          console.log('Backend login failed, using local data:', error)
-          // Fallback to local data if backend fails
-          router.push('/(tabs)/explore')
-          return
-        }
-      }
-
-      // No local data or different wallet - try to login with backend
-      console.log('No local data found, checking if user exists in backend...')
+    if (walletAddress) {
       const loginResponse = await authService.loginUser(walletAddress)
-
-      if (loginResponse === 404) {
-        // User doesn't exist - redirect to registration
-        console.log('User not found, redirecting to registration...')
-        router.push('/complete-profile')
+      
+      if (loginResponse.status !== 404) {
+        router.push('/(tabs)/explore')
       } else {
-        // User exists in backend - save their data and redirect
-        console.log('User found in backend, logging in...')
-        await updateUser(loginResponse.user)
-        
-        // Check if user has profiles to decide where to redirect
-        const hasShopperProfile = loginResponse.user.shopperProfile
-        const hasExpertProfile = loginResponse.user.expertProfile
-        
-        if (!hasShopperProfile && !hasExpertProfile) {
-          // User exists but has no profiles - redirect to complete profile
-          router.push('/complete-profile')
-        } else {
-          // User has at least one profile - redirect to main app
-          router.push('/(tabs)/explore')
-        }
+        console.log("Redirecting to complete profile page...");
+        router.replace('/complete-profile')
       }
-    } catch (error) {
-      Alert.alert('Connection Failed', error instanceof Error ? error.message : 'Failed to connect wallet')
     }
   }
 
@@ -72,16 +31,18 @@ export default function ConnectWalletScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Connect Your Wallet</Text>
-          <Text style={styles.subtitle}>Connect your Solana wallet to get started with ShopSage</Text>
+          <Text style={styles.subtitle}>Connect and sign in with your Solana wallet to access ShopSage securely</Text>
         </View>
 
         {/* Connect Button */}
         <TouchableOpacity
-          style={[styles.connectButton, isLoading && styles.connectButtonDisabled]}
+          style={[styles.connectButton, (isLoading || signingMessage) && styles.connectButtonDisabled]}
           onPress={handleConnect}
-          disabled={isLoading}
+          disabled={isLoading || signingMessage}
         >
-          <Text style={styles.connectButtonText}>{isLoading ? 'Connecting...' : 'Connect Wallet'}</Text>
+          <Text style={styles.connectButtonText}>
+            {signingMessage ? 'Authenticating...' : isLoading ? 'Connecting...' : 'Connect & Sign In'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

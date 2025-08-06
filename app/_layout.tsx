@@ -1,15 +1,13 @@
 import { AppProviders } from '@/components/app-providers'
-import { AppSplashController } from '@/components/app-splash-controller'
 import { useAuth } from '@/components/auth/auth-provider'
 import { PortalHost } from '@rn-primitives/portal'
 import { useFonts } from 'expo-font'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
-import { useCallback, useEffect } from 'react'
-import { View } from 'react-native'
-import 'react-native-reanimated'
+import { useCallback, useEffect, useState } from 'react'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import 'react-native-reanimated'
 import { initializeApp } from '../utils/appInitializer'
 
 export type RootStackParamList = {
@@ -26,9 +24,13 @@ export type RootStackParamList = {
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
+  const [appIsReady, setAppIsReady] = useState(false)
+
   // Initialize app configuration
   useEffect(() => {
-    initializeApp().catch(console.error)
+    initializeApp()
+      .then(() => setAppIsReady(true))
+      .catch(console.error)
   }, [])
 
   const [loaded] = useFonts({
@@ -36,25 +38,18 @@ export default function RootLayout() {
   })
 
   const onLayoutRootView = useCallback(async () => {
-    if (loaded) {
-      // This tells the splash screen to hide immediately! If we call this after
-      // `setAppIsReady`, then we may see a blank screen while the app is
-      // loading its initial state and rendering its first pixels. So instead,
-      // we hide the splash screen once we know the root view has already
-      // performed layout.
+    if (loaded && appIsReady) {
       await SplashScreen.hideAsync()
     }
-  }, [loaded])
+  }, [loaded, appIsReady])
 
-  if (!loaded) {
-    // Async font loading only occurs in development.
+  if (!loaded || !appIsReady) {
     return null
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <AppProviders>
-        <AppSplashController />
         <RootNavigator />
         <StatusBar style="auto" />
       </AppProviders>

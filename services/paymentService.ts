@@ -1,8 +1,8 @@
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 import { PLATFORM_CONFIG } from '../constants/programs'
-import { dataProvider } from './dataProvider'
 import { solanaUtils } from '../utils/solana'
+import { dataProvider } from './dataProvider'
 
 export interface ProcessPaymentRequest {
   sessionId: string
@@ -113,12 +113,12 @@ export const paymentService = {
           cluster: 'devnet',
           identity: {
             name: 'ShopSage',
-            uri: 'https://shopsage.app',
+            uri: 'https://shopsage.site',
             icon: 'favicon.ico',
           },
         })
 
-        const fromPubkey = authResult.accounts[0].publicKey
+        const fromPubkey = solanaUtils.getPublicKeyFromAddress(authResult.accounts[0].address)
         const toPubkey = new PublicKey(params.expertWalletAddress)
 
         // Create connection to Solana devnet
@@ -259,7 +259,7 @@ export const paymentService = {
           cluster: PLATFORM_CONFIG.CLUSTER,
           identity: {
             name: 'ShopSage',
-            uri: 'https://shopsage.app',
+            uri: 'https://shopsage.site',
             icon: 'favicon.ico',
           },
         })
@@ -291,12 +291,12 @@ export const paymentService = {
           cluster: PLATFORM_CONFIG.CLUSTER,
           identity: {
             name: 'ShopSage',
-            uri: 'https://shopsage.app',
+            uri: 'https://shopsage.site',
             icon: 'favicon.ico',
           },
         })
 
-        const shopperPubkey = authResult.accounts[0].publicKey
+        const shopperPubkey = solanaUtils.getPublicKeyFromAddress(authResult.accounts[0].address)
         const expertPubkey = new PublicKey(params.expertWalletAddress)
 
         // Initialize Solana utils with wallet
@@ -338,12 +338,12 @@ export const paymentService = {
           cluster: PLATFORM_CONFIG.CLUSTER,
           identity: {
             name: 'ShopSage',
-            uri: 'https://shopsage.app',
+            uri: 'https://shopsage.site',
             icon: 'favicon.ico',
           },
         })
 
-        const shopperPubkey = authResult.accounts[0].publicKey
+        const shopperPubkey = solanaUtils.getPublicKeyFromAddress(authResult.accounts[0].address)
         const expertPubkey = new PublicKey(expertWalletAddress)
 
         // Initialize Solana utils with wallet
@@ -377,7 +377,7 @@ export const paymentService = {
           cluster: PLATFORM_CONFIG.CLUSTER,
           identity: {
             name: 'ShopSage',
-            uri: 'https://shopsage.app',
+            uri: 'https://shopsage.site',
             icon: 'favicon.ico',
           },
         })
@@ -406,7 +406,7 @@ export const paymentService = {
           cluster: PLATFORM_CONFIG.CLUSTER,
           identity: {
             name: 'ShopSage',
-            uri: 'https://shopsage.app',
+            uri: 'https://shopsage.site',
             icon: 'favicon.ico',
           },
         })

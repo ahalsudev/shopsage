@@ -1,3 +1,4 @@
+import { AppConfig } from '@/config/environment'
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { PublicKey } from '@solana/web3.js'
 import { PLATFORM_CONFIG } from '../constants/programs'
@@ -32,12 +33,12 @@ export const expertProgramService = {
           cluster: PLATFORM_CONFIG.CLUSTER,
           identity: {
             name: 'ShopSage',
-            uri: 'https://shopsage.app',
+            uri: AppConfig.uri,
             icon: 'favicon.ico',
           },
         })
 
-        const authority = authResult.accounts[0].publicKey
+        const authority = solanaUtils.getPublicKeyFromAddress(authResult.accounts[0].address)
 
         // Initialize Solana utils with wallet
         await solanaUtils.initializePrograms(authority)
@@ -66,12 +67,12 @@ export const expertProgramService = {
           cluster: PLATFORM_CONFIG.CLUSTER,
           identity: {
             name: 'ShopSage',
-            uri: 'https://shopsage.app',
+            uri: AppConfig.uri,
             icon: 'favicon.ico',
           },
         })
 
-        const authority = authResult.accounts[0].publicKey
+        const authority = solanaUtils.getPublicKeyFromAddress(authResult.accounts[0].address)
 
         // Initialize Solana utils with wallet
         await solanaUtils.initializePrograms(authority)

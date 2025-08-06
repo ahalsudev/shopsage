@@ -86,82 +86,85 @@ export default function ShopperOnboarding() {
 
   return (
     <View style={styles.container}>
-      <GradientHeader 
+      <GradientHeader
         title="Become a Shopper"
         subtitle="Tell us about your interests to get personalized expert recommendations"
       />
       <SafeAreaView style={styles.contentContainer}>
         <ScrollView style={styles.scrollView}>
-
-        {/* Categories Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Shopping Categories</Text>
-          <Text style={styles.sectionDescription}>What types of products are you interested in?</Text>
-          <View style={styles.tagsContainer}>
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category}
-                style={[styles.tag, selectedCategories.includes(category) && styles.selectedTag]}
-                onPress={() => toggleCategory(category)}
-              >
-                <Text style={[styles.tagText, selectedCategories.includes(category) && styles.selectedTagText]}>
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {/* Categories Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Shopping Categories</Text>
+            <Text style={styles.sectionDescription}>What types of products are you interested in?</Text>
+            <View style={styles.tagsContainer}>
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category}
+                  style={[styles.tag, selectedCategories.includes(category) && styles.selectedTag]}
+                  onPress={() => toggleCategory(category)}
+                >
+                  <Text style={[styles.tagText, selectedCategories.includes(category) && styles.selectedTagText]}>
+                    {category}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Interests Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal Interests</Text>
-          <Text style={styles.sectionDescription}>What are your hobbies and interests?</Text>
-          <View style={styles.tagsContainer}>
-            {interests.map((interest) => (
-              <TouchableOpacity
-                key={interest}
-                style={[styles.tag, selectedInterests.includes(interest) && styles.selectedTag]}
-                onPress={() => toggleInterest(interest)}
-              >
-                <Text style={[styles.tagText, selectedInterests.includes(interest) && styles.selectedTagText]}>
-                  {interest}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {/* Interests Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Personal Interests</Text>
+            <Text style={styles.sectionDescription}>What are your hobbies and interests?</Text>
+            <View style={styles.tagsContainer}>
+              {interests.map((interest) => (
+                <TouchableOpacity
+                  key={interest}
+                  style={[styles.tag, selectedInterests.includes(interest) && styles.selectedTag]}
+                  onPress={() => toggleInterest(interest)}
+                >
+                  <Text style={[styles.tagText, selectedInterests.includes(interest) && styles.selectedTagText]}>
+                    {interest}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Price Range Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Budget Range</Text>
-          <Text style={styles.sectionDescription}>What's your typical budget for expert consultations?</Text>
-          <View style={styles.priceOptions}>
-            {[
-              { label: '$0.01 - $0.50', min: 0.01, max: 0.5 },
-              { label: '$0.50 - $1.00', min: 0.5, max: 1.0 },
-              { label: '$1.00 - $2.00', min: 1.0, max: 2.0 },
-              { label: '$2.00+', min: 2.0, max: 10.0 },
-            ].map((range) => (
-              <TouchableOpacity
-                key={range.label}
-                style={[styles.priceOption, priceRange.min === range.min && styles.selectedPriceOption]}
-                onPress={() => setPriceRange({ min: range.min, max: range.max })}
-              >
-                <Text style={[styles.priceOptionText, priceRange.min === range.min && styles.selectedPriceOptionText]}>
-                  {range.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {/* Price Range Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Budget Range</Text>
+            <Text style={styles.sectionDescription}>What&apos;s your typical budget for expert consultations?</Text>
+            <View style={styles.priceOptions}>
+              {[
+                { label: '$0.01 - $0.50', min: 0.01, max: 0.5 },
+                { label: '$0.50 - $1.00', min: 0.5, max: 1.0 },
+                { label: '$1.00 - $2.00', min: 1.0, max: 2.0 },
+                { label: '$2.00+', min: 2.0, max: 10.0 },
+              ].map((range) => (
+                <TouchableOpacity
+                  key={range.label}
+                  style={[styles.priceOption, priceRange.min === range.min && styles.selectedPriceOption]}
+                  onPress={() => setPriceRange({ min: range.min, max: range.max })}
+                >
+                  <Text
+                    style={[styles.priceOptionText, priceRange.min === range.min && styles.selectedPriceOptionText]}
+                  >
+                    {range.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
 
-        <TouchableOpacity
-          style={[styles.completeButton, isLoading && styles.disabledButton]}
-          onPress={handleComplete}
-          disabled={isLoading}
-        >
-          <Text style={styles.completeButtonText}>{isLoading ? 'Creating Profile...' : 'Complete Shopper Setup'}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.completeButton, isLoading && styles.disabledButton]}
+            onPress={handleComplete}
+            disabled={isLoading}
+          >
+            <Text style={styles.completeButtonText}>
+              {isLoading ? 'Creating Profile...' : 'Complete Shopper Setup'}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </SafeAreaView>
     </View>

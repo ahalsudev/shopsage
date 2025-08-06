@@ -33,8 +33,8 @@ export const localSessionStorage = {
   async saveSession(session: LocalSession): Promise<void> {
     try {
       const existingSessions = await this.getSessions()
-      const sessionIndex = existingSessions.findIndex(s => s.id === session.id)
-      
+      const sessionIndex = existingSessions.findIndex((s) => s.id === session.id)
+
       if (sessionIndex >= 0) {
         // Update existing session
         existingSessions[sessionIndex] = { ...session, updatedAt: new Date().toISOString() }
@@ -52,13 +52,13 @@ export const localSessionStorage = {
   async updateSession(sessionId: string, updates: Partial<LocalSession>): Promise<void> {
     try {
       const sessions = await this.getSessions()
-      const sessionIndex = sessions.findIndex(s => s.id === sessionId)
-      
+      const sessionIndex = sessions.findIndex((s) => s.id === sessionId)
+
       if (sessionIndex >= 0) {
-        sessions[sessionIndex] = { 
-          ...sessions[sessionIndex], 
-          ...updates, 
-          updatedAt: new Date().toISOString() 
+        sessions[sessionIndex] = {
+          ...sessions[sessionIndex],
+          ...updates,
+          updatedAt: new Date().toISOString(),
         }
         await AsyncStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessions))
       }
@@ -77,7 +77,10 @@ export const localSessionStorage = {
       '5': { name: 'Jennifer Lee', specialization: 'Beauty & Skincare' },
     }
 
-    const expert = expertData[expertId as keyof typeof expertData] || { name: 'Unknown Expert', specialization: 'Unknown' }
+    const expert = expertData[expertId as keyof typeof expertData] || {
+      name: 'Unknown Expert',
+      specialization: 'Unknown',
+    }
 
     // Generate unique session ID if not provided or if it already exists
     let uniqueSessionId = sessionId
@@ -86,7 +89,7 @@ export const localSessionStorage = {
     } else {
       // Check if session already exists, if so create a new unique ID
       const existingSessions = await this.getSessions()
-      if (existingSessions.some(s => s.id === sessionId)) {
+      if (existingSessions.some((s) => s.id === sessionId)) {
         uniqueSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       }
     }
@@ -140,5 +143,5 @@ export const localSessionStorage = {
     } catch (error) {
       console.error('Failed to clear sessions:', error)
     }
-  }
+  },
 }

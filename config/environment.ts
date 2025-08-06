@@ -3,7 +3,10 @@
  * Centralized configuration for the app based on environment variables
  */
 
-export interface AppConfig {
+export interface AppConfigInterface {
+  name: string
+  uri: string
+  domain: string
   api: {
     useRemoteApi: boolean
     baseUrl: string
@@ -38,7 +41,10 @@ const getBooleanEnvVar = (key: string, fallback: boolean = false): boolean => {
 }
 
 // Main configuration object
-export const AppConfig: AppConfig = {
+export const AppConfig: AppConfigInterface = {
+  name: 'shopsage-mobile',
+  uri: 'https://shopsage.site',
+  domain: 'shopsage.site',
   api: {
     useRemoteApi: getBooleanEnvVar('EXPO_PUBLIC_USE_REMOTE_API', false),
     baseUrl: getEnvVar('EXPO_PUBLIC_API_BASE_URL', 'http://192.168.8.153:3001/api'),

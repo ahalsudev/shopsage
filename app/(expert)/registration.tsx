@@ -61,85 +61,81 @@ const ExpertRegistrationScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <GradientHeader 
-        title="Expert Registration"
-        subtitle="Complete your profile to start helping shoppers"
-      />
+      <GradientHeader title="Expert Registration" subtitle="Complete your profile to start helping shoppers" />
       <SafeAreaView style={styles.contentContainer}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.content}>
+            {/* Specialization Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Specialization *</Text>
+              <TextInput
+                style={styles.input}
+                value={specialization}
+                onChangeText={setSpecialization}
+                placeholder="e.g., Tech Support, Fashion Advice, Product Reviews"
+                placeholderTextColor="#9ca3af"
+              />
+            </View>
 
-          {/* Specialization Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Specialization *</Text>
-            <TextInput
-              style={styles.input}
-              value={specialization}
-              onChangeText={setSpecialization}
-              placeholder="e.g., Tech Support, Fashion Advice, Product Reviews"
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
+            {/* Bio Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Bio</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={bio}
+                onChangeText={setBio}
+                placeholder="Tell shoppers about your expertise and experience"
+                placeholderTextColor="#9ca3af"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
 
-          {/* Bio Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Bio</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={bio}
-              onChangeText={setBio}
-              placeholder="Tell shoppers about your expertise and experience"
-              placeholderTextColor="#9ca3af"
-              multiline
-              numberOfLines={4}
-            />
-          </View>
+            {/* Session Rate Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Session Rate (SOL) *</Text>
+              <TextInput
+                style={styles.input}
+                value={sessionRate}
+                onChangeText={setSessionRate}
+                placeholder="0.05"
+                placeholderTextColor="#9ca3af"
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.helpText}>Rate per 5-minute consultation session</Text>
+            </View>
 
-          {/* Session Rate Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Session Rate (SOL) *</Text>
-            <TextInput
-              style={styles.input}
-              value={sessionRate}
-              onChangeText={setSessionRate}
-              placeholder="0.05"
-              placeholderTextColor="#9ca3af"
-              keyboardType="decimal-pad"
-            />
-            <Text style={styles.helpText}>Rate per 5-minute consultation session</Text>
-          </View>
+            {/* Profile Image URL Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Profile Image URL</Text>
+              <TextInput
+                style={styles.input}
+                value={profileImageUrl}
+                onChangeText={setProfileImageUrl}
+                placeholder="https://example.com/your-photo.jpg"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
 
-          {/* Profile Image URL Input */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Profile Image URL</Text>
-            <TextInput
-              style={styles.input}
-              value={profileImageUrl}
-              onChangeText={setProfileImageUrl}
-              placeholder="https://example.com/your-photo.jpg"
-              placeholderTextColor="#9ca3af"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
+            {/* Create Profile Button */}
+            <TouchableOpacity
+              style={[styles.createButton, profileLoading && styles.createButtonDisabled]}
+              onPress={handleCreateProfile}
+              disabled={profileLoading}
+            >
+              <Text style={styles.createButtonText}>
+                {profileLoading ? 'Creating Profile...' : 'Create Expert Profile'}
+              </Text>
+            </TouchableOpacity>
 
-          {/* Create Profile Button */}
-          <TouchableOpacity
-            style={[styles.createButton, profileLoading && styles.createButtonDisabled]}
-            onPress={handleCreateProfile}
-            disabled={profileLoading}
-          >
-            <Text style={styles.createButtonText}>
-              {profileLoading ? 'Creating Profile...' : 'Create Expert Profile'}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Info */}
-          <View style={styles.infoContainer}>
-            <Text style={styles.infoText}>
-              💡 Your profile will be reviewed before going live. You'll be notified once it's approved.
-            </Text>
-          </View>
+            {/* Info */}
+            <View style={styles.infoContainer}>
+              <Text style={styles.infoText}>
+                💡 Your profile will be reviewed before going live. You&apos;ll be notified once it&apos;s approved.
+              </Text>
+            </View>
           </View>
         </ScrollView>
       </SafeAreaView>

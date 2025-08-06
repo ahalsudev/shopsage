@@ -1,27 +1,24 @@
 import { useRouter } from 'expo-router'
 import { useAuth } from '../components/auth/auth-provider'
-import { useActiveRole } from '../components/RoleManager'
 
 export const useRoleNavigation = () => {
-  const { completeProfile } = useAuth()
-  const activeRole = useActiveRole()
+  const { user } = useAuth()
   const router = useRouter()
 
   const navigateToRoleHome = () => {
-    if (!completeProfile?.roles) return
+    if (!user) return
 
-    const { canShop, canExpert } = completeProfile.roles
-
-    if (activeRole === 'dual' && canShop && canExpert) {
-      // Show combined dashboard
-      router.push('/(profile)/home')
-    } else if (activeRole === 'expert' && canExpert) {
+    if (user.activeRole === 'expert' && user.expertProfile) {
       router.push('/(expert)/profile-management')
-    } else if (activeRole === 'shopper' && canShop) {
+    } else if (user.activeRole === 'shopper' && user.shopperProfile) {
+      router.push('/(shopper)/sessions')
+    } else if (user.activeRole === 'dual' && user.shopperProfile && user.expertProfile) {
+      // For dual role, navigate to a combined dashboard or one of the specific dashboards
+      // For now, let's default to shopper sessions if both exist
       router.push('/(shopper)/sessions')
     } else {
-      // Fallback to profile
-      router.push('/(profile)/home')
+      // Fallback to profile or a general home screen if no specific role profile is active
+      router.push('/(tabs)/explore')
     }
   }
 
@@ -34,39 +31,39 @@ export const useRoleNavigation = () => {
   }
 
   const canAccessRole = (role: 'shopper' | 'expert'): boolean => {
-    if (!completeProfile?.roles) return false
-    return role === 'shopper' ? completeProfile.roles.canShop : completeProfile.roles.canExpert
+    if (!user) return false
+    return role === 'shopper' ? !!user.shopperProfile : !!user.expertProfile
   }
 
   const needsOnboarding = (): { shopper: boolean; expert: boolean } => {
-    if (!completeProfile?.roles) {
+    if (!user) {
       return { shopper: true, expert: true }
     }
 
     return {
-      shopper: !completeProfile.roles.canShop,
-      expert: !completeProfile.roles.canExpert,
+      shopper: !user.shopperProfile,
+      expert: !user.expertProfile,
     }
   }
 
   const getAvailableRoles = (): ('shopper' | 'expert')[] => {
-    if (!completeProfile?.roles) return []
+    if (!user) return []
 
     const roles: ('shopper' | 'expert')[] = []
-    if (completeProfile.roles.canShop) roles.push('shopper')
-    if (completeProfile.roles.canExpert) roles.push('expert')
+    if (user.shopperProfile) roles.push('shopper')
+    if (user.expertProfile) roles.push('expert')
 
     return roles
   }
 
-  const getRecommendedRole = (): 'shopper' | 'expert' | 'dual' => {
+  const getRecommendedRole = (): 'shopper' | 'expert' | 'dual' | 'none' => {
     const available = getAvailableRoles()
 
     if (available.length === 2) return 'dual'
     if (available.includes('expert')) return 'expert'
     if (available.includes('shopper')) return 'shopper'
 
-    return 'shopper' // Default for new users
+    return 'none' // Default for new users
   }
 
   return {
@@ -76,6 +73,6 @@ export const useRoleNavigation = () => {
     needsOnboarding,
     getAvailableRoles,
     getRecommendedRole,
-    activeRole,
+    activeRole: user?.activeRole || 'none',
   }
 }

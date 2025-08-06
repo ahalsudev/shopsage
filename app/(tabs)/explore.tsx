@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -33,6 +34,7 @@ export default function ExploreScreen() {
   const [experts, setExperts] = useState<Expert[]>([])
   const [filteredExperts, setFilteredExperts] = useState<Expert[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [suggestions, setSuggestions] = useState<string[]>([])
 
   useEffect(() => {
@@ -44,33 +46,27 @@ export default function ExploreScreen() {
     generateSuggestions()
   }, [searchQuery, experts])
 
-  const loadExperts = async () => {
+  const loadExperts = async (isRefresh = false) => {
     try {
-      setIsLoading(true)
+      if (isRefresh) {
+        setRefreshing(true)
+      } else {
+        setIsLoading(true)
+      }
       const { expertService } = await import('@/services/expertService')
       const expertsData = await expertService.getExperts()
+      const expertsList = expertsData["experts"]
       
-      console.log('Raw experts data from backend:', expertsData)
-      console.log('Type of expertsData:', typeof expertsData)
-      console.log('Is array:', Array.isArray(expertsData))
-      
+
       // Check if we got valid data
       if (!expertsData) {
         throw new Error('No data received from backend')
       }
-      
+
       // Handle different response formats
-      let expertsArray = expertsData
-      if (expertsData.experts && Array.isArray(expertsData.experts)) {
-        expertsArray = expertsData.experts
-      } else if (expertsData.data && Array.isArray(expertsData.data)) {
-        expertsArray = expertsData.data
-      } else if (!Array.isArray(expertsData)) {
-        throw new Error(`Expected array but got ${typeof expertsData}`)
-      }
-      
       // Transform backend data to match the Expert interface
-      const transformedExperts: Expert[] = expertsArray.map((expert, index) => ({
+      const transformedExperts: Expert[] = expertsList.map((expert, index) => ({
+        ...expert,
         id: expert.id || expert.userId,
         name: expert.name || 'Unknown Expert',
         specialization: expert.specialization || 'General',
@@ -79,22 +75,20 @@ export default function ExploreScreen() {
         rating: expert.rating || 4.0,
         totalConsultations: expert.totalConsultations || 0,
         isOnline: expert.isOnline || false,
-        categories: [expert.specialization || 'General'],
-        products: [], // This would need to come from backend or be derived
+        categories: [expert.specialization || 'General'], // Example: derive categories from specialization
+        products: [], // Placeholder, populate from actual data if available
         avatar: ['👗', '📱', '🏠', '💪', '💄'][index % 5], // Fallback avatar
-        bgColor: ['#60faaa', '#3b82f6', '#60a5fa', '#60faaa', '#3b82f6'][index % 5] // Fallback colors
+        bgColor: ['#60faaa', '#3b82f6', '#60a5fa', '#60faaa', '#3b82f6'][index % 5], // Fallback colors
       }))
-      
+
       console.log('Transformed experts:', transformedExperts)
       setExperts(transformedExperts)
       setFilteredExperts(transformedExperts)
     } catch (error) {
       console.error('Failed to load experts:', error)
-      // Fallback to mock data if backend fails
-      setExperts(mockExperts)
-      setFilteredExperts(mockExperts)
     } finally {
       setIsLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -105,14 +99,14 @@ export default function ExploreScreen() {
     }
 
     const query = searchQuery.toLowerCase()
-    const allProducts = experts.flatMap(expert => expert.products)
-    const allCategories = experts.flatMap(expert => expert.categories)
+    const allProducts = experts.flatMap((expert) => expert.products)
+    const allCategories = experts.flatMap((expert) => expert.categories)
     const allTerms = [...new Set([...allProducts, ...allCategories])]
-    
+
     const matchingSuggestions = allTerms
-      .filter(term => term.toLowerCase().includes(query) && term.toLowerCase() !== query)
+      .filter((term) => term.toLowerCase().includes(query) && term.toLowerCase() !== query)
       .slice(0, 5)
-    
+
     setSuggestions(matchingSuggestions)
   }
 
@@ -124,23 +118,21 @@ export default function ExploreScreen() {
     }
 
     const query = searchQuery.toLowerCase()
-    const filtered = experts.filter(expert => {
+    const filtered = experts.filter((expert) => {
       // Search by expert name
       if (expert.name.toLowerCase().includes(query)) return true
-      
+
       // Search by specialization
       if (expert.specialization.toLowerCase().includes(query)) return true
-      
+
       // Smart product matching
-      const matchesProduct = expert.products.some(product => 
-        product.toLowerCase().includes(query) || query.includes(product.toLowerCase())
+      const matchesProduct = expert.products.some(
+        (product) => product.toLowerCase().includes(query) || query.includes(product.toLowerCase()),
       )
-      
+
       // Category matching
-      const matchesCategory = expert.categories.some(category =>
-        category.toLowerCase().includes(query)
-      )
-      
+      const matchesCategory = expert.categories.some((category) => category.toLowerCase().includes(query))
+
       return matchesProduct || matchesCategory
     })
 
@@ -159,11 +151,7 @@ export default function ExploreScreen() {
   }
 
   const renderExpertCard = (expert: Expert) => (
-    <TouchableOpacity
-      key={expert.id}
-      style={styles.expertCard}
-      onPress={() => handleExpertPress(expert)}
-    >
+    <TouchableOpacity key={expert.id} style={styles.expertCard} onPress={() => handleExpertPress(expert)}>
       {/* Avatar Section */}
       <View style={[styles.avatarSection, { backgroundColor: expert.bgColor }]}>
         <Text style={styles.avatarEmoji}>{expert.avatar}</Text>
@@ -174,9 +162,13 @@ export default function ExploreScreen() {
 
       {/* Content Section */}
       <View style={styles.cardContent}>
-        <Text style={styles.expertName} numberOfLines={1}>{expert.name}</Text>
-        <Text style={styles.expertSpecialization} numberOfLines={1}>{expert.specialization}</Text>
-        
+        <Text style={styles.expertName} numberOfLines={1}>
+          {expert.name}
+        </Text>
+        <Text style={styles.expertSpecialization} numberOfLines={1}>
+          {expert.specialization}
+        </Text>
+
         <Text style={styles.expertBio} numberOfLines={2}>
           {expert.bio}
         </Text>
@@ -196,77 +188,76 @@ export default function ExploreScreen() {
 
   return (
     <View style={styles.container}>
-      <GradientHeader 
-        title="Find Shopping Experts"
-        subtitle="Get personalized advice for any product"
-      />
+      <GradientHeader title="Find Shopping Experts" subtitle="Get personalized advice for any product" />
       <SafeAreaView style={styles.contentContainer}>
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by product, category, or expert..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#9ca3af"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity style={styles.clearButton} onPress={() => setSearchQuery('')}>
+                <Text style={styles.clearButtonText}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by product, category, or expert..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#9ca3af"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity 
-              style={styles.clearButton}
-              onPress={() => setSearchQuery('')}
-            >
-              <Text style={styles.clearButtonText}>✕</Text>
-            </TouchableOpacity>
+          {/* Autocomplete Suggestions */}
+          {suggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              {suggestions.map((suggestion, index) => (
+                <TouchableOpacity key={index} style={styles.suggestionItem} onPress={() => setSearchQuery(suggestion)}>
+                  <Text style={styles.suggestionText}>{suggestion}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </View>
-        
-        {/* Autocomplete Suggestions */}
-        {suggestions.length > 0 && (
-          <View style={styles.suggestionsContainer}>
-            {suggestions.map((suggestion, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.suggestionItem}
-                onPress={() => setSearchQuery(suggestion)}
-              >
-                <Text style={styles.suggestionText}>{suggestion}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
 
-      {/* Search Results */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-            <Text style={styles.loadingText}>Finding experts...</Text>
-          </View>
-        ) : filteredExperts.length > 0 ? (
-          <>
-            {searchQuery ? (
-              <Text style={styles.resultsText}>
-                Found {filteredExperts.length} expert{filteredExperts.length !== 1 ? 's' : ''} for "{searchQuery}"
-              </Text>
-            ) : (
-              <Text style={styles.resultsText}>Available Experts</Text>
-            )}
-            <View style={styles.expertGrid}>
-              {filteredExperts.map(renderExpertCard)}
+        {/* Search Results */}
+        <ScrollView 
+          style={styles.content} 
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => loadExperts(true)}
+              colors={['#3b82f6']}
+              tintColor="#3b82f6"
+            />
+          }
+        >
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#3b82f6" />
+              <Text style={styles.loadingText}>Finding experts...</Text>
             </View>
-          </>
-        ) : (
-          <View style={styles.noResultsContainer}>
-            <Text style={styles.noResultsTitle}>No experts found</Text>
-            <Text style={styles.noResultsSubtitle}>
-              Try searching for products like "iPhone", "dress", or "furniture"
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+          ) : filteredExperts.length > 0 ? (
+            <>
+              {searchQuery ? (
+                <Text style={styles.resultsText}>
+                  Found {filteredExperts.length} expert{filteredExperts.length !== 1 ? 's' : ''} for &quot;{searchQuery}
+                  &quot;
+                </Text>
+              ) : (
+                <Text style={styles.resultsText}>Available Experts</Text>
+              )}
+              <View style={styles.expertGrid}>{filteredExperts.map(renderExpertCard)}</View>
+            </>
+          ) : (
+            <View style={styles.noResultsContainer}>
+              <Text style={styles.noResultsTitle}>No experts found</Text>
+              <Text style={styles.noResultsSubtitle}>
+                Try searching for products like &quot;iPhone&quot;, &quot;dress&quot;, or &quot;furniture&quot;
+              </Text>
+            </View>
+          )}
+        </ScrollView>
       </SafeAreaView>
     </View>
   )
