@@ -4,7 +4,6 @@ import { router } from 'expo-router'
 import React, { useEffect, useState } from 'react'
 import { Modal, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { ProfileSetup } from '../../components/ProfileSetup'
-import { RoleSwitcher } from '../../components/RoleSwitcher'
 
 const ProfileScreen: React.FC = () => {
   const { user, signOut, syncUserData, enableRole } = useAuth()
@@ -117,13 +116,6 @@ const ProfileScreen: React.FC = () => {
             {user?.user?.walletAddress?.slice(0, 8)}...{user?.user?.walletAddress?.slice(-8)}
           </Text>
         </View>
-
-        {/* Role Switcher */}
-        {user && user.availableRoles && user.availableRoles.length > 1 && (
-          <View style={styles.section}>
-            <RoleSwitcher style={styles.roleSwitcher} />
-          </View>
-        )}
 
         {/* Current Role Stats */}
         {currentRoleProfile && (
@@ -341,9 +333,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#0284c7',
     fontWeight: '500',
-  },
-  roleSwitcher: {
-    paddingVertical: 16,
   },
   statRow: {
     flexDirection: 'row',

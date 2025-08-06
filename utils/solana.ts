@@ -3,7 +3,7 @@ import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { Connection, PublicKey, SystemProgram, Transaction } from '@solana/web3.js'
 
 import { AppConfig } from '../config/environment'
-import { PDA_SEEDS, PLATFORM_CONFIG } from '../constants/programs'
+import { PDA_SEEDS, PLATFORM_CONFIG, getCurrentNetwork, getProgramIds } from '../constants/programs'
 import { ShopsageExpert } from '../types/programs/shopsage-expert'
 import { ShopsagePayment } from '../types/programs/shopsage-payment'
 import { ShopsageSession } from '../types/programs/shopsage-session'

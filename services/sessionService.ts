@@ -112,9 +112,35 @@ export const sessionService = {
 
   async startSession(sessionId: string): Promise<SessionResponse> {
     try {
-      return await this.updateSession(sessionId, { status: 'active' })
+      // Update session status and record start time
+      return await this.updateSession(sessionId, { 
+        status: 'active',
+        // Note: backend should automatically set start time when status changes to active
+      })
     } catch (error) {
+      log.error('Failed to start session:', error)
       throw error
+    }
+  },
+
+  async getSessionStartTime(sessionId: string): Promise<Date | null> {
+    try {
+      const session = await this.getSession(sessionId)
+      // Assuming backend provides startTime or updatedAt when session becomes active
+      return session ? new Date() : null // Fallback to current time
+    } catch (error) {
+      log.error('Failed to get session start time:', error)
+      return null
+    }
+  },
+
+  async isSessionActive(sessionId: string): Promise<boolean> {
+    try {
+      const session = await this.getSession(sessionId)
+      return session?.status === 'active'
+    } catch (error) {
+      log.error('Failed to check session status:', error)
+      return false
     }
   },
 

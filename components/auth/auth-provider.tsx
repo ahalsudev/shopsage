@@ -5,9 +5,7 @@ import { useMutation } from '@tanstack/react-query'
 import { createContext, type PropsWithChildren, use, useCallback, useEffect, useMemo, useState } from 'react'
 import { userService } from '../../services/userService'
 import { UserCompleteProfile } from '../../types/auth'
-import { authStateManager } from '../../utils/authStateManager'
 
-import { expertProgramService } from '@/services/expertProgramService'
 
 export interface AuthState {
   isAuthenticated: boolean
@@ -19,7 +17,6 @@ export interface AuthState {
   updateUser: (updates: Partial<UserCompleteProfile>) => Promise<void>
   enableRole: (role: 'shopper' | 'expert', profileData: any) => Promise<void>
   syncUserData: () => Promise<void>
-  switchRole: (role: 'shopper' | 'expert') => Promise<void>
 }
 
 const Context = createContext<AuthState>({} as AuthState)
@@ -86,14 +83,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setTimeout(() => {
       console.log('[AuthProvider] Checking auth state after sign-in:', {
         accountsLength: accounts?.length ?? 0,
-        hasValidToken,
-        isInRegistrationFlow,
         hasProfile: profile !== null
       })
     }, 1000)
     
     setAuthLoading(false)
-  }, [accounts, hasValidToken, isInRegistrationFlow, profile])
+  }, [accounts, profile])
 
   const signInMutation = useSignInMutation(onSignInSuccess)
 
@@ -164,10 +159,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
         setProfile(updatedUser)
         await userService.saveUserDataLocally(updatedUser)
-        
-        // Update registration flow state when user profile is updated
-        const inRegistrationFlow = await authStateManager.isInRegistrationFlow()
-        setIsInRegistrationFlow(inRegistrationFlow)
+
       } else {
         console.log('User data not saved locally')
       }
@@ -227,43 +219,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }
 
-  const refreshRegistrationState = async () => {
-    try {
-      const inRegistrationFlow = await authStateManager.isInRegistrationFlow()
-      console.log('[AuthProvider] Refreshing registration state:', inRegistrationFlow)
-      setIsInRegistrationFlow(inRegistrationFlow)
-      
-      // Force a re-evaluation of authentication state
-      setTimeout(() => {
-        console.log('[AuthProvider] Auth state after registration refresh:', {
-          accountsLength: accounts?.length ?? 0,
-          hasValidToken,
-          isInRegistrationFlow: inRegistrationFlow,
-          hasProfile: profile !== null
-        })
-      }, 100)
-    } catch (error) {
-      log.error('Failed to refresh registration state:', error)
-    }
-  }
-
-  const refreshExpertProfile = async () => {
-    try {
-      if (user) {
-        const expertProfile = await expertProgramService.getExpertHybrid(user.user.walletAddress)
-        if (expertProfile) {
-          const updatedUser = {
-            ...user,
-            expertProfile,
-          }
-          setProfile(updatedUser)
-          await userService.saveUserDataLocally(updatedUser)
-        }
-      }
-    } catch (error) {
-      log.error('Failed to refresh expert profile:', error)
-    }
-  }
 
   const signOut = async () => {
     try {
@@ -303,25 +258,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }
 
-  const switchRole = async (role: 'shopper' | 'expert') => {
-    try {
-      setAuthLoading(true)
-      log.info('Switching role to:', role)
-      if (profile) {
-        const updatedUser = {
-          ...profile,
-          activeRole: role,
-        }
-        setProfile(updatedUser)
-        await userService.saveUserDataLocally(updatedUser)
-      }
-    } catch (error) {
-      log.error('Failed to switch role:', error)
-      throw error
-    } finally {
-      setAuthLoading(false)
-    }
-  }
 
   const value: AuthState = useMemo(
     () => ({
@@ -332,7 +268,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       updateUser,
       enableRole,
       syncUserData,
-      switchRole,
       isAuthenticated: (accounts?.length ?? 0) > 0,
       isRegistered: profile !== null,
       isLoading: signInMutation.isPending || isLoading || authLoading,
@@ -348,7 +283,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       updateUser,
       enableRole,
       syncUserData,
-      switchRole,
       profile,
     ],
   )

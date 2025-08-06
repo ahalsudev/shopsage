@@ -53,6 +53,10 @@ const VideoCallContent: React.FC = () => {
   const [timeRemaining, setTimeRemaining] = useState(300) // 5 minutes in seconds
   const [showExtensionDialog, setShowExtensionDialog] = useState(false)
   const [callExtended, setCallExtended] = useState(false)
+  const [sessionStarted, setSessionStarted] = useState(false)
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null)
+  const [participantReady, setParticipantReady] = useState<{[key: string]: boolean}>({})
+  const [callParticipants, setCallParticipants] = useState<{[key: string]: string}>({}) // id -> name mapping
 
   useEffect(() => {
     if (!call) return
@@ -119,13 +123,39 @@ const VideoCallContent: React.FC = () => {
 
     loadExistingMessages()
 
+    // Set up participant tracking
+    const updateParticipants = () => {
+      if (call?.state?.participants) {
+        const participantMap: {[key: string]: string} = {}
+        call.state.participants.forEach(participant => {
+          if (participant.userId && participant.name) {
+            participantMap[participant.userId] = participant.name
+          }
+        })
+        setCallParticipants(participantMap)
+        log.info('Updated call participants:', participantMap)
+      }
+    }
+
+    // Update participants on join
+    updateParticipants()
+
+    // Listen for participant changes
+    const participantUnsubscribe = call.on('call.updated', () => {
+      updateParticipants()
+    })
+
     // Set up chat message listener
-    const unsubscribe = call.on('call.reaction_new', (event) => {
+    const messageUnsubscribe = call.on('call.reaction_new', (event) => {
       if (event.reaction?.type === 'chat_message') {
+        // Get sender name from participants mapping or event data
+        const senderId = event.user?.id || event.reaction?.custom?.senderId || 'unknown'
+        const senderName = callParticipants[senderId] || event.user?.name || event.reaction?.custom?.senderName || 'Unknown User'
+        
         const newMessage: ChatMessage = {
           id: Date.now().toString(),
           text: event.reaction.custom?.message || '',
-          user: { name: event.user?.name || user?.user?.name || 'You' },
+          user: { name: senderName },
           timestamp: new Date(),
         }
         setChatMessages((prev) => [...prev, newMessage])
@@ -136,8 +166,8 @@ const VideoCallContent: React.FC = () => {
             id: newMessage.id,
             text: newMessage.text,
             user: {
-              id: event.user?.id || 'unknown',
-              name: event.user?.name || user?.user?.name || 'Unknown User',
+              id: senderId,
+              name: senderName,
             },
             timestamp: newMessage.timestamp,
             sessionId: sessionId,
@@ -149,16 +179,40 @@ const VideoCallContent: React.FC = () => {
           })
         }
       }
+      
+      // Handle session start confirmation
+      if (event.reaction?.type === 'session_ready') {
+        const userId = event.user?.id || event.reaction?.custom?.userId
+        if (userId) {
+          setParticipantReady(prev => ({...prev, [userId]: true}))
+        }
+      }
     })
 
     return () => {
-      unsubscribe()
+      participantUnsubscribe()
+      messageUnsubscribe()
     }
   }, [call, sessionId])
 
-  // Timer effect for 5-minute limit
+  // Check if session should start automatically when both participants are ready
   useEffect(() => {
-    if (callingState !== 'joined') return
+    if (!sessionStarted && Object.keys(callParticipants).length >= 2) {
+      const readyParticipants = Object.values(participantReady).filter(Boolean).length
+      const totalParticipants = Object.keys(callParticipants).length
+      
+      if (readyParticipants >= totalParticipants) {
+        // All participants are ready, start session
+        setSessionStarted(true)
+        setSessionStartTime(new Date())
+        log.info('Session started automatically - all participants ready')
+      }
+    }
+  }, [participantReady, callParticipants, sessionStarted])
+
+  // Timer effect for 5-minute limit - only start when session begins
+  useEffect(() => {
+    if (!sessionStarted || !sessionStartTime) return
 
     const timer = setInterval(() => {
       setTimeRemaining((prev) => {
@@ -178,7 +232,7 @@ const VideoCallContent: React.FC = () => {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [callingState, callExtended, showExtensionDialog])
+  }, [sessionStarted, sessionStartTime, callExtended, showExtensionDialog])
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -247,13 +301,39 @@ const VideoCallContent: React.FC = () => {
     }
   }
 
+  const handleStartSession = async () => {
+    if (!call || !user?.user?.id) return
+
+    try {
+      // Mark current user as ready
+      setParticipantReady(prev => ({...prev, [user.user.id]: true}))
+      
+      // Send ready signal to other participants
+      await call.sendReaction({
+        type: 'session_ready',
+        custom: { 
+          userId: user.user.id,
+          userName: user.user.name 
+        },
+      })
+
+      log.info('User marked as ready for session start')
+    } catch (error) {
+      log.error('Failed to send session ready signal:', error)
+    }
+  }
+
   const sendChatMessage = async () => {
-    if (!messageText.trim() || !call) return
+    if (!messageText.trim() || !call || !user?.user?.id) return
 
     try {
       await call.sendReaction({
         type: 'chat_message',
-        custom: { message: messageText.trim() },
+        custom: { 
+          message: messageText.trim(),
+          senderId: user.user.id,
+          senderName: user.user.name 
+        },
       })
 
       setMessageText('')
@@ -285,12 +365,33 @@ const VideoCallContent: React.FC = () => {
             <CallContent onHangupCallHandler={handleEndCall} />
           </View>
 
-          {/* Timer Display */}
-          <View style={styles.timerOverlay}>
-            <View style={[styles.timerContainer, timeRemaining <= 30 && styles.timerWarning]}>
-              <Text style={styles.timerText}>{formatTime(timeRemaining)}</Text>
+          {/* Timer Display - only show when session started */}
+          {sessionStarted ? (
+            <View style={styles.timerOverlay}>
+              <View style={[styles.timerContainer, timeRemaining <= 30 && styles.timerWarning]}>
+                <Text style={styles.timerText}>{formatTime(timeRemaining)}</Text>
+              </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.sessionStatusOverlay}>
+              <View style={styles.sessionStatusContainer}>
+                <Text style={styles.sessionStatusTitle}>Consultation Session</Text>
+                <Text style={styles.sessionStatusText}>
+                  {Object.keys(callParticipants).length < 2 
+                    ? 'Waiting for other participant...'
+                    : participantReady[user?.user?.id || ''] 
+                      ? 'Waiting for other participant to be ready...'
+                      : 'Ready to start consultation?'
+                  }
+                </Text>
+                {Object.keys(callParticipants).length >= 2 && !participantReady[user?.user?.id || ''] && (
+                  <TouchableOpacity style={styles.startSessionButton} onPress={handleStartSession}>
+                    <Text style={styles.startSessionButtonText}>I'm Ready</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          )}
 
           {/* Chat Toggle Button Overlay */}
           <View style={styles.controlsOverlay}>
@@ -320,7 +421,9 @@ const VideoCallContent: React.FC = () => {
             >
               {chatMessages.map((message) => (
                 <View key={message.id} style={styles.messageContainer}>
-                  <Text style={styles.messageSender}>{message.user?.name || user?.user?.name || 'You'}</Text>
+                  <Text style={styles.messageSender}>
+                    {message.user?.name || 'Unknown User'}
+                  </Text>
                   <Text style={styles.messageText}>{message.text}</Text>
                   <Text style={styles.messageTime}>{message.timestamp.toLocaleTimeString()}</Text>
                 </View>
@@ -470,6 +573,45 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  sessionStatusOverlay: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  sessionStatusContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    maxWidth: 280,
+  },
+  sessionStatusTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  sessionStatusText: {
+    color: '#ffffff',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  startSessionButton: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  startSessionButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   controlsOverlay: {
     position: 'absolute',
