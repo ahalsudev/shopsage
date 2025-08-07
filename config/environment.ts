@@ -56,7 +56,7 @@ export const AppConfig: AppConfigInterface = {
     showNetworkLogs: getBooleanEnvVar('EXPO_PUBLIC_SHOW_NETWORK_LOGS', __DEV__),
   },
   blockchain: {
-    cluster: (getEnvVar('EXPO_PUBLIC_SOLANA_CLUSTER', 'localnet') as any) || 'localnet',
+    cluster: (getEnvVar('EXPO_PUBLIC_SOLANA_CLUSTER', 'devnet') as any) || 'devnet',
     rpcUrl: getEnvVar('EXPO_PUBLIC_SOLANA_RPC_URL', 'https://api.devnet.solana.com'),
   },
   features: {

@@ -40,29 +40,41 @@ function useSignInMutation(onSignInSuccess?: (walletAddress: string) => void) {
         domain: AppConfig.domain,
       })
 
-      const result = await signIn({
-        domain: AppConfig.domain,
-        uri: AppConfig.uri,
-        statement: 'Sign in to ShopSage',
-        issuedAt: new Date().toISOString(),
-        nonce: Math.random().toString(36).substring(2, 15),
-      })
+      try {
+        const result = await signIn({
+          domain: AppConfig.domain,
+          uri: AppConfig.uri,
+          statement: 'Sign in to ShopSage',
+          issuedAt: new Date().toISOString(),
+          nonce: Math.random().toString(36).substring(2, 15),
+        })
 
-      console.log('[AuthProvider] SignIn completed:', result ? 'Success' : 'Failed')
-      console.log('[AuthProvider] Result details:', {
-        hasResult: !!result,
-        hasPublicKey: !!result?.publicKey,
-        publicKey: result?.publicKey?.toString()
-      })
+        console.log('[AuthProvider] SignIn completed:', result ? 'Success' : 'Failed')
+        console.log('[AuthProvider] Result details:', {
+          hasResult: !!result,
+          hasPublicKey: !!result?.publicKey,
+          publicKey: result?.publicKey?.toString()
+        })
 
-      // Call success callback if provided
-      if (onSignInSuccess && result) {
-        let address = result.publicKey.toString()
-        console.log('[AuthProvider] Calling onSignInSuccess with address:', address)
-        onSignInSuccess(address)
+        // Call success callback if provided
+        if (onSignInSuccess && result) {
+          let address = result.publicKey.toString()
+          console.log('[AuthProvider] Calling onSignInSuccess with address:', address)
+          onSignInSuccess(address)
+        }
+
+        return result
+      } catch (error) {
+        console.error('[AuthProvider] SignIn failed:', error)
+        
+        if (error?.message?.includes('CancellationException')) {
+          throw new Error('Wallet connection was cancelled. Please try again and approve the connection in Solflare wallet.')
+        } else if (error?.message?.includes('cancelled')) {
+          throw new Error('Wallet authorization was cancelled. Please approve the connection to continue.')
+        } else {
+          throw new Error(`Wallet connection failed: ${error?.message || 'Unknown error'}`)
+        }
       }
-
-      return result
     },
   })
 }

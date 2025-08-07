@@ -275,12 +275,19 @@ const VideoCallContent: React.FC = () => {
 
   const handleEndCall = async () => {
     try {
-      await call?.leave()
+      log.info('VideoCall: Ending call...', { sessionId, hasCall: !!call })
+      
+      if (call) {
+        await call.leave()
+        log.info('VideoCall: Successfully left the call')
+      }
 
       // Update session status
       if (sessionId) {
         try {
+          log.info('VideoCall: Completing session via API...', { sessionId })
           await sessionService.completeSession(sessionId)
+          log.info('VideoCall: Session completed via API successfully')
         } catch (error) {
           log.warn('Failed to complete session via API:', error)
         }
@@ -294,10 +301,15 @@ const VideoCallContent: React.FC = () => {
         }
       }
 
-      router.back()
+      log.info('VideoCall: Navigating back after call end')
+      // Use replace to go to sessions page instead of back navigation
+      // This prevents any potential navigation stack issues
+      router.replace('/(shopper)/sessions')
     } catch (error) {
-      log.error('Failed to end call:', error)
-      router.back()
+      log.error('Failed to end call properly:', error)
+      // Even if ending fails, we should still navigate away
+      log.info('VideoCall: Navigating to sessions despite error')
+      router.replace('/(shopper)/sessions')
     }
   }
 
@@ -386,7 +398,7 @@ const VideoCallContent: React.FC = () => {
                 </Text>
                 {Object.keys(callParticipants).length >= 2 && !participantReady[user?.user?.id || ''] && (
                   <TouchableOpacity style={styles.startSessionButton} onPress={handleStartSession}>
-                    <Text style={styles.startSessionButtonText}>I'm Ready</Text>
+                    <Text style={styles.startSessionButtonText}>I&apos;m Ready</Text>
                   </TouchableOpacity>
                 )}
               </View>

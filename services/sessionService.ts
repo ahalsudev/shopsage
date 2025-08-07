@@ -63,21 +63,45 @@ export const sessionService = {
 
   async createPaidSession(sessionData: CreateSessionRequest, transactionHash: string): Promise<SessionResponse> {
     try {
-      log.info('SessionService: Creating paid session', { sessionData, transactionHash })
+      log.info('SessionService: Creating paid session', { 
+        sessionData: {
+          expertId: sessionData.expertId,
+          shopperId: sessionData.shopperId,
+          startTime: sessionData.startTime,
+          amount: sessionData.amount
+        }, 
+        transactionHash 
+      })
+      
+      // Validate input
+      if (!sessionData.expertId || !sessionData.shopperId || !sessionData.amount) {
+        throw new Error('Invalid session data: expertId, shopperId, and amount are required')
+      }
+      
+      if (!transactionHash) {
+        throw new Error('Transaction hash is required for paid sessions')
+      }
       
       // Create session with payment information
+      log.info('SessionService: Creating session via dataProvider...')
       const session = await dataProvider.createSession(sessionData)
+      log.info('SessionService: Session created successfully', { sessionId: session.id })
       
       // Update session with payment details
+      log.info('SessionService: Updating session with payment details...', { sessionId: session.id })
       await this.updateSession(session.id, {
         paymentStatus: 'completed',
         transactionHash: transactionHash
       })
+      log.info('SessionService: Session updated with payment details successfully')
       
       return session
     } catch (error) {
       log.error('Failed to create paid session:', error)
-      throw error
+      if (error instanceof Error) {
+        throw new Error(`Session creation failed: ${error.message}`)
+      }
+      throw new Error('Failed to create paid session due to unknown error')
     }
   },
 
@@ -380,6 +404,22 @@ export const sessionService = {
     try {
       log.info('SessionService: Starting video call for session', { sessionId, participantIds })
 
+      // Validate input parameters
+      if (!sessionId) {
+        throw new Error('Session ID is required to start video call')
+      }
+      
+      if (!participantIds || participantIds.length === 0) {
+        throw new Error('At least one participant is required to start video call')
+      }
+
+      // Check if video calling is available
+      const isAvailable = await this.isVideoCallAvailable()
+      if (!isAvailable) {
+        throw new Error('Video calling service is not available')
+      }
+
+      log.info('SessionService: Requesting video call credentials from videoCallService...')
       // Start the video call
       const credentials = await videoCallService.startVideoCall({
         sessionId,
@@ -387,19 +427,49 @@ export const sessionService = {
         callType: 'video',
       })
 
+      if (!credentials || !credentials.callId || !credentials.userToken) {
+        throw new Error('Invalid video call credentials received from service')
+      }
+
+      log.info('SessionService: Video call credentials obtained', { 
+        sessionId,
+        callId: credentials.callId,
+        userId: credentials.userId,
+        hasToken: !!credentials.userToken
+      })
+
       // Update session with video call information
       try {
+        log.info('SessionService: Updating session status to active...', { sessionId })
         await this.updateSession(sessionId, {
           status: 'active',
         })
+        log.info('SessionService: Session status updated to active successfully')
       } catch (updateError) {
         log.warn('Failed to update session status after starting video call:', updateError)
+        // Don't throw here as video call credentials are valid
       }
 
+      log.info('SessionService: Video call started successfully for session', { sessionId })
       return credentials
     } catch (error) {
       log.error('Failed to start video call for session:', error)
-      throw new Error('Failed to start video call')
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Session ID')) {
+          throw new Error('Invalid session ID provided')
+        } else if (error.message.includes('participant')) {
+          throw new Error('Invalid participants for video call')
+        } else if (error.message.includes('available')) {
+          throw new Error('Video calling service is currently unavailable')
+        } else if (error.message.includes('credentials')) {
+          throw new Error('Failed to obtain video call credentials')
+        } else {
+          throw new Error(`Video call startup failed: ${error.message}`)
+        }
+      }
+      
+      throw new Error('Failed to start video call due to unknown error')
     }
   },
 

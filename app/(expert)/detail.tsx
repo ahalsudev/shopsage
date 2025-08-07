@@ -4,8 +4,8 @@ import { GradientHeader } from '@/components/common/GradientHeader'
 import PreCallPayment from '@/components/payments/PreCallPayment'
 import { PaymentResult } from '@/types/payments'
 import { videoCallNavigation } from '@/utils/videoCallNavigation'
-import { useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useEffect, useState } from 'react'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
+import React, { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
@@ -35,7 +35,7 @@ interface Expert {
 const ExpertDetailScreen: React.FC = () => {
   const { expertId } = useLocalSearchParams()
   const router = useRouter()
-  const { showAlert, AlertComponent } = useCustomAlert()
+  const { AlertComponent } = useCustomAlert()
   const { user } = useAuth()
   const [expert, setExpert] = useState<Expert | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -44,8 +44,28 @@ const ExpertDetailScreen: React.FC = () => {
   const [sessionData, setSessionData] = useState<any>(null)
 
   useEffect(() => {
+    console.log('[ExpertDetail] Component mounted/updated, expertId:', expertId)
     loadExpert()
   }, [expertId])
+
+  useEffect(() => {
+    // Add component lifecycle tracking
+    console.log('[ExpertDetail] Component did mount')
+    
+    return () => {
+      console.log('[ExpertDetail] Component will unmount - this indicates a reload/navigation')
+    }
+  }, [])
+
+  // Track when the screen comes back into focus (e.g., after wallet interaction)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('[ExpertDetail] 🔄 Screen gained focus - user returned from wallet or other app')
+      return () => {
+        console.log('[ExpertDetail] Screen lost focus - user navigating away')
+      }
+    }, [])
+  )
 
   const loadExpert = async () => {
     try {
@@ -159,34 +179,44 @@ const ExpertDetailScreen: React.FC = () => {
   }
 
   const handlePaymentSuccess = async (result: PaymentResult) => {
+    console.log('[ExpertDetail] ===== PAYMENT SUCCESS HANDLER CALLED =====')
+    console.log('[ExpertDetail] Payment success - transaction:', result.transactionHash)
+    
+    setShowPaymentDialog(false)
+    
     try {
-      console.log('[ExpertDetail] Payment successful:', result.transactionHash)
-      setShowPaymentDialog(false)
-
-      if (!sessionData || !expert) {
-        throw new Error('Session data not available')
-      }
-
-      // Create session with payment transaction hash
-      const { sessionService } = await import('@/services/sessionService')
-      const session = await sessionService.createPaidSession(sessionData, result.transactionHash)
+      console.log('[ExpertDetail] Creating session after successful payment...')
       
-      console.log('[ExpertDetail] Created paid session:', session)
-
-      // Start video call
+      // Create session on backend
+      const { sessionService } = await import('@/services/sessionService')
+      const session = await sessionService.createSession({
+        expertId: expertId as string,
+        shopperId: user.user!.id,
+        startTime: new Date().toISOString(),
+        amount: expert!.sessionRate.toString(),
+        transactionHash: result.transactionHash
+      })
+      
+      console.log('[ExpertDetail] ✅ Session created successfully:', session.id)
+      
+      // Start video call for this session
+      console.log('[ExpertDetail] Starting video call for session...')
       await videoCallNavigation.startVideoCall({
         sessionId: session.id,
-        userId: user!.user!.id,
-        participantIds: [user!.user!.id, expertId as string],
+        userId: user.user!.id,
+        participantIds: [user.user!.id, expertId as string]
       })
-
-      // Show success message
-      Alert.alert('Payment Successful', 'Your consultation is starting now!')
+      
+      console.log('[ExpertDetail] ✅ Successfully started and navigated to video call')
       
     } catch (error) {
-      console.error('[ExpertDetail] Failed to start consultation after payment:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start consultation. Please contact support.'
-      Alert.alert('Error', errorMessage)
+      console.error('[ExpertDetail] ❌ Error in post-payment flow:', error)
+      
+      Alert.alert(
+        'Payment Successful!',
+        `Transaction completed: ${result.transactionHash?.slice(0, 8)}...\n\nHowever, there was an issue setting up the call. Please contact support.`,
+        [{ text: 'OK' }]
+      )
     }
   }
 

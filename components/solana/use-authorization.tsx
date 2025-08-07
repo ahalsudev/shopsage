@@ -18,7 +18,11 @@ import { WalletIcon } from '@wallet-standard/core'
 import { toUint8Array } from 'js-base64'
 import { useCallback, useMemo } from 'react'
 
-const identity: AppIdentity = { name: AppConfig.name, uri: AppConfig.uri }
+const identity: AppIdentity = { 
+  name: 'ShopSage', 
+  uri: 'https://shopsage.site',
+  icon: 'favicon.ico'
+}
 
 export type Account = Readonly<{
   address: Base64EncodedAddress
@@ -137,17 +141,27 @@ export function useAuthorization() {
 
   const authorizeSession = useCallback(
     async (wallet: AuthorizeAPI) => {
+      // Convert cluster ID to format expected by mobile wallet adapter
+      const chainId = selectedCluster.id.replace('solana:', '')
       const authParams = {
         identity,
-        chain: selectedCluster.id,
+        chain: chainId,
         auth_token: fetchQuery.data?.authToken,
       }
       console.log('authorizeSession called with params:', authParams)
       console.log('selectedCluster:', selectedCluster)
 
       try {
-        const authorizationResult = await wallet.authorize(authParams)
-        console.log('authorization successful:', authorizationResult)
+        console.log('[Authorization] Calling wallet.authorize with params:', authParams)
+        
+        // Add timeout to prevent hanging
+        const authPromise = wallet.authorize(authParams)
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Authorization timeout after 30 seconds')), 30000)
+        })
+        
+        const authorizationResult = await Promise.race([authPromise, timeoutPromise])
+        console.log('[Authorization] authorization successful:', authorizationResult)
         return (await handleAuthorizationResult(authorizationResult)).selectedAccount
       } catch (error) {
         console.error('authorization failed:', error)
@@ -160,13 +174,46 @@ export function useAuthorization() {
   const authorizeSessionWithSignIn = useCallback(
     async (wallet: AuthorizeAPI, signInPayload: SignInPayload) => {
       console.log('[Authorization] Starting authorization with sign-in for cluster:', selectedCluster.id)
-      const authorizationResult = await wallet.authorize({
-        identity,
-        chain: selectedCluster.id,
-        auth_token: fetchQuery.data?.authToken,
-        sign_in_payload: signInPayload,
-      })
-      return (await handleAuthorizationResult(authorizationResult)).selectedAccount
+      console.log('[Authorization] Identity:', identity)
+      console.log('[Authorization] Sign-in payload:', signInPayload)
+      
+      try {
+        console.log('[Authorization] Calling wallet.authorize...')
+        console.log('[Authorization] Using chain ID:', selectedCluster.id, '->', selectedCluster.id.replace('solana:', ''))
+        
+        // Convert cluster ID to format expected by mobile wallet adapter
+        const chainId = selectedCluster.id.replace('solana:', '')
+        
+        // Add timeout to prevent hanging
+        const authPromise = wallet.authorize({
+          identity,
+          chain: chainId,
+          auth_token: fetchQuery.data?.authToken,
+          sign_in_payload: signInPayload,
+        })
+        
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Authorization timeout after 30 seconds')), 30000)
+        })
+        
+        const authorizationResult = await Promise.race([authPromise, timeoutPromise])
+        console.log('[Authorization] Authorization successful')
+        return (await handleAuthorizationResult(authorizationResult)).selectedAccount
+      } catch (error) {
+        console.error('[Authorization] Authorization failed:', error)
+        console.error('[Authorization] Error details:', {
+          name: error?.name,
+          message: error?.message,
+          code: error?.code
+        })
+        
+        if (error?.message?.includes('CancellationException')) {
+          console.log('[Authorization] User cancelled wallet authorization')
+          throw new Error('Wallet authorization was cancelled. Please try again and approve the connection in your wallet.')
+        }
+        
+        throw error
+      }
     },
     [fetchQuery.data?.authToken, handleAuthorizationResult, selectedCluster.id, invalidateAuthorizations],
   )

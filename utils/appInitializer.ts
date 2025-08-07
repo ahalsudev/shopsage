@@ -4,10 +4,15 @@
  */
 
 import { logConfig, validateConfig, log } from '../config/environment'
+import { globalErrorHandler } from './errorHandler'
 
 export const initializeApp = async (): Promise<void> => {
   try {
     log.info('=== Initializing ShopSage Mobile App ===')
+
+    // Initialize global error handler
+    log.info('Initializing global error handler...')
+    globalErrorHandler.init()
 
     // Log current configuration
     logConfig()

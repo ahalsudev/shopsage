@@ -1,6 +1,7 @@
 import { PLATFORM_CONFIG } from '@/constants/programs'
 import { paymentService } from '@/services/paymentService'
 import { PaymentBreakdown, PaymentResult, PreCallPaymentProps } from '@/types/payments'
+import { globalErrorHandler } from '@/utils/errorHandler'
 import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
@@ -86,12 +87,20 @@ const PreCallPayment: React.FC<PreCallPaymentProps> = ({
       return
     }
 
+    console.log('[PreCallPayment] ========== STARTING PAYMENT PROCESS ==========')
     setIsProcessing(true)
     
     try {
       console.log('[PreCallPayment] Processing payment for session:', session.id)
+      console.log('[PreCallPayment] Payment parameters:', {
+        sessionId: session.id,
+        expertWalletAddress: expert.walletAddress,
+        amount: expert.sessionRate,
+        selectedCluster: selectedCluster?.name
+      })
       
       // Process payment through mobile wallet
+      console.log('[PreCallPayment] Calling paymentService.processConsultationPayment...')
       const paymentResult = await paymentService.processConsultationPayment({
         sessionId: session.id,
         expertWalletAddress: expert.walletAddress,
@@ -104,7 +113,12 @@ const PreCallPayment: React.FC<PreCallPaymentProps> = ({
         selectedCluster
       })
 
-      console.log('[PreCallPayment] Payment successful:', paymentResult.signature)
+      console.log('[PaymentService] ✅ Payment service returned SUCCESS:', paymentResult.signature)
+
+      // Validate the payment result
+      if (!paymentResult || !paymentResult.signature) {
+        throw new Error('Invalid payment result - missing signature')
+      }
 
       // Create successful result
       const result: PaymentResult = {
@@ -113,10 +127,24 @@ const PreCallPayment: React.FC<PreCallPaymentProps> = ({
         breakdown: paymentBreakdown,
       }
 
+      console.log('[PreCallPayment] ✅ About to call onPaymentSuccess with result:', {
+        success: result.success,
+        transactionHash: result.transactionHash?.substring(0, 20) + '...',
+        hasBreakdown: !!result.breakdown
+      })
+      
+      // Call the success handler directly
       onPaymentSuccess(result)
       
+      console.log('[PreCallPayment] ✅ onPaymentSuccess returned - no error thrown')
+      
     } catch (error) {
-      console.error('[PreCallPayment] Payment failed:', error)
+      console.error('[PreCallPayment] Payment failed with error:', error)
+      console.error('[PreCallPayment] Error details:', {
+        name: error?.name,
+        message: error?.message,
+        stack: error?.stack
+      })
       
       let errorMessage = 'Payment failed. Please try again.'
       
@@ -130,9 +158,12 @@ const PreCallPayment: React.FC<PreCallPaymentProps> = ({
         }
       }
       
+      console.log('[PreCallPayment] Calling onPaymentError with message:', errorMessage)
       onPaymentError(errorMessage)
     } finally {
+      console.log('[PreCallPayment] Setting isProcessing to false')
       setIsProcessing(false)
+      console.log('[PreCallPayment] ========== PAYMENT PROCESS COMPLETE ==========')
     }
   }
 
