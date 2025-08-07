@@ -1,0 +1,848 @@
+{
+  "info": {
+    "name": "ShopSage Backend API",
+    "description": "Complete API collection for ShopSage Expert Consultation Platform - A Solana-powered marketplace for expert consultations",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check & Test",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Basic health check endpoint to verify server is running"
+          },
+          "response": []
+        },
+        {
+          "name": "Test Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/test",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "test"
+              ]
+            },
+            "description": "Test endpoint returning JSON response"
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Solana Address",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/solana/validate-address/9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "solana",
+                "validate-address",
+                "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM"
+              ]
+            },
+            "description": "Validate a Solana wallet address"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletAddress\": \"9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register new user account (no initial role profiles)"
+          },
+          "response": []
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletAddress\": \"9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login existing user with wallet address"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Secure Authentication",
+      "item": [
+        {
+          "name": "Initiate Secure Auth",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet_address\": \"9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/secure-auth/initiate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "secure-auth",
+                "initiate"
+              ]
+            },
+            "description": "Initiate secure wallet authentication with cryptographic challenge"
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Secure Auth",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"wallet_address\": \"9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM\",\n  \"nonce\": \"ABC123DEF456GHI789JKL012MNO345PQR678STU901VWX234YZ\",\n  \"signature\": \"base58_encoded_signature_from_wallet_here\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/secure-auth/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "secure-auth",
+                "complete"
+              ]
+            },
+            "description": "Complete secure authentication with wallet signature"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Profiles (Multi-Role System)",
+      "item": [
+        {
+          "name": "Get Complete User Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "complete"
+              ]
+            },
+            "description": "Get complete user profile with role capabilities (canShop, canExpert) and both optional profiles"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Expert Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specialization\": \"Tech Support\",\n  \"bio\": \"I help with technical issues and troubleshooting. Expert in web development, mobile apps, and system administration.\",\n  \"sessionRate\": 50.0,\n  \"profileImageUrl\": \"https://example.com/profile.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/expert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "expert"
+              ]
+            },
+            "description": "Create expert profile for user (adds expert role)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expert Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/expert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "expert"
+              ]
+            },
+            "description": "Get expert profile only (returns mock data)"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Shopper Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categories\": [\"Electronics\", \"Fashion\", \"Home & Garden\"],\n  \"priceRangeMin\": 10.0,\n  \"priceRangeMax\": 500.0,\n  \"interests\": [\"Tech gadgets\", \"Sustainable fashion\", \"Smart home\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/shopper",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "shopper"
+              ]
+            },
+            "description": "Create shopper profile for user (adds shopper role)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Shopper Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/shopper",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "shopper"
+              ]
+            },
+            "description": "Get shopper profile only (returns mock data)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Expert Directory",
+      "item": [
+        {
+          "name": "List All Experts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/experts/list",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experts",
+                "list"
+              ]
+            },
+            "description": "Get list of all available experts"
+          },
+          "response": []
+        },
+        {
+          "name": "Search Experts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/experts/search?specialization=tech&sessionRate=50",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experts",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "specialization",
+                  "value": "tech"
+                },
+                {
+                  "key": "sessionRate",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Search experts by criteria"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sessions",
+      "item": [
+        {
+          "name": "Create Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expert_id\": \"123e4567-e89b-12d3-a456-426614174001\",\n  \"duration_minutes\": 5,\n  \"amount\": \"0.01\",\n  \"start_time\": \"2024-01-01T12:00:00Z\",\n  \"topic\": \"Technical support consultation\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sessions/create",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sessions",
+                "create"
+              ]
+            },
+            "description": "Create a new consultation session"
+          },
+          "response": []
+        },
+        {
+          "name": "List Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sessions/list",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sessions",
+                "list"
+              ]
+            },
+            "description": "Get list of all sessions for the authenticated user"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Session by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/sessions/123e4567-e89b-12d3-a456-426614174000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sessions",
+                "123e4567-e89b-12d3-a456-426614174000"
+              ]
+            },
+            "description": "Get specific session details by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\",\n  \"end_time\": \"2024-01-01T12:05:00Z\",\n  \"transaction_hash\": \"solana_transaction_hash_here\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sessions/123e4567-e89b-12d3-a456-426614174000/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sessions",
+                "123e4567-e89b-12d3-a456-426614174000",
+                "update"
+              ]
+            },
+            "description": "Update session status and details"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Expert Profile Variations",
+      "item": [
+        {
+          "name": "Create Expert Profile - Marketing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specialization\": \"Marketing Strategy\",\n  \"bio\": \"Digital marketing expert with 10+ years experience. Specializing in social media, content marketing, and brand strategy.\",\n  \"sessionRate\": 75.0,\n  \"profileImageUrl\": \"https://example.com/marketing-expert.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experts/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experts",
+                "profile"
+              ]
+            },
+            "description": "Create marketing expert profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Expert Profile - Finance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specialization\": \"Financial Advisory\",\n  \"bio\": \"Certified financial planner helping with investment strategies, retirement planning, and personal finance optimization.\",\n  \"sessionRate\": 100.0,\n  \"profileImageUrl\": \"https://example.com/finance-expert.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/experts/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "experts",
+                "profile"
+              ]
+            },
+            "description": "Create financial advisory expert profile"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Session Scenarios",
+      "item": [
+        {
+          "name": "Create Session - Tech Support",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expert_id\": \"123e4567-e89b-12d3-a456-426614174001\",\n  \"duration_minutes\": 15,\n  \"amount\": \"0.03\",\n  \"start_time\": \"2024-01-01T14:00:00Z\",\n  \"topic\": \"Website debugging and performance optimization\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sessions/create",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sessions",
+                "create"
+              ]
+            },
+            "description": "Create tech support session"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Session - Marketing Consultation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expert_id\": \"123e4567-e89b-12d3-a456-426614174002\",\n  \"duration_minutes\": 30,\n  \"amount\": \"0.06\",\n  \"start_time\": \"2024-01-01T15:00:00Z\",\n  \"topic\": \"Social media strategy for startup launch\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sessions/create",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sessions",
+                "create"
+              ]
+            },
+            "description": "Create marketing consultation session"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Session - Start",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\",\n  \"start_time\": \"2024-01-01T14:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sessions/123e4567-e89b-12d3-a456-426614174000/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sessions",
+                "123e4567-e89b-12d3-a456-426614174000",
+                "update"
+              ]
+            },
+            "description": "Start a session (mark as active)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Session - Complete",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"completed\",\n  \"end_time\": \"2024-01-01T14:15:00Z\",\n  \"transaction_hash\": \"5uGfvLB8XjZQVqGKrLkEF3yKxvRjN8qK6nXYp2mJwHzA\",\n  \"payment_status\": \"completed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/sessions/123e4567-e89b-12d3-a456-426614174000/update",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "sessions",
+                "123e4567-e89b-12d3-a456-426614174000",
+                "update"
+              ]
+            },
+            "description": "Complete a session with payment"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Multi-Role User Scenarios",
+      "item": [
+        {
+          "name": "New User Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletAddress\": \"9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM\",\n  \"name\": \"Sarah Johnson\",\n  \"email\": \"sarah@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register new user (no profiles initially - activeRole: 'none')"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Shopper Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categories\": [\"Electronics\", \"Fashion\"],\n  \"priceRangeMin\": 20.0,\n  \"priceRangeMax\": 300.0,\n  \"interests\": [\"Tech gadgets\", \"Sustainable fashion\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/shopper",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "shopper"
+              ]
+            },
+            "description": "User becomes shopper (activeRole: 'shopper', canShop: true)"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Expert Role (Dual Role User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specialization\": \"UX/UI Design\",\n  \"bio\": \"Professional designer with 8+ years experience in user experience and interface design.\",\n  \"sessionRate\": 75.0,\n  \"profileImageUrl\": \"https://example.com/sarah-profile.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/expert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "expert"
+              ]
+            },
+            "description": "User also becomes expert (activeRole: 'dual', canShop: true, canExpert: true)"
+          },
+          "response": []
+        },
+        {
+          "name": "Check Complete Profile (Dual Role)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "complete"
+              ]
+            },
+            "description": "Verify user now has both roles with all profile data"
+          },
+          "response": []
+        },
+        {
+          "name": "Expert-Only User Setup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"walletAddress\": \"8KzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWN\",\n  \"name\": \"Dr. Michael Chen\",\n  \"email\": \"michael@experttech.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Register user who will only be an expert"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Expert Profile Only",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"specialization\": \"Financial Advisory\",\n  \"bio\": \"Certified financial planner with expertise in investment strategies and retirement planning.\",\n  \"sessionRate\": 100.0,\n  \"profileImageUrl\": \"https://example.com/michael-profile.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/expert",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profiles",
+                "expert"
+              ]
+            },
+            "description": "User becomes expert only (activeRole: 'expert', canExpert: true, canShop: false)"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ3YWxsZXRfYWRkcmVzcyI6IjlXekRYd0JibWtnOFpUYk5NcVV4dlFSQXlyWnpEc0dZZExWTDl6WXRBV1dNIiwidXNlcl9pZCI6IjEyM2U0NTY3LWU4OWItMTJkMy1hNDU2LTQyNjYxNDE3NDAwMCIsImV4cCI6MTY0MzI5NzIzNH0.example_token_here",
+      "type": "string"
+    }
+  ]
+}
