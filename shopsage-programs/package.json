@@ -1,0 +1,21 @@
+{
+  "name": "shopsage-programs",
+  "version": "1.0.0",
+  "description": "Solana programs for ShopSage platform",
+  "scripts": {
+    "test": "anchor test"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@solana/web3.js": "^1.87.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0",
+    "ts-mocha": "^10.0.0",
+    "mocha": "^10.2.0",
+    "chai": "^4.3.10",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6"
+  }
+}

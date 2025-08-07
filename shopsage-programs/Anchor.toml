@@ -1,0 +1,29 @@
+[toolchain]
+anchor_version = "0.31.1"
+
+[features]
+seeds = false
+skip-lint = false
+
+[workspace]
+members = ["shopsage-payment", "shopsage-expert", "shopsage-session"]
+
+[programs.localnet]
+shopsage-payment = "GN61kESLP3vmVREX6nhTfqEf94vyuLX8YK4trEv6u6cZ"
+shopsage-expert = "GHfHdFkfV93FGVz5atrTSUyBHpKkot4XkTRTaVdHD9b3"
+shopsage-session = "5dDShygfkN6qwRh7jrPN5BmNcDY4EF5LY88Ffw7dS1Zc"
+
+[programs.devnet]
+shopsage-payment = "GN61kESLP3vmVREX6nhTfqEf94vyuLX8YK4trEv6u6cZ"
+shopsage-expert = "GHfHdFkfV93FGVz5atrTSUyBHpKkot4XkTRTaVdHD9b3"
+shopsage-session = "5dDShygfkN6qwRh7jrPN5BmNcDY4EF5LY88Ffw7dS1Zc"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
