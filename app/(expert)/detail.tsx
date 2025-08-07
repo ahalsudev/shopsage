@@ -1,6 +1,8 @@
 import { useCustomAlert } from '@/components/CustomAlert'
 import { useAuth } from '@/components/auth/auth-provider'
 import { GradientHeader } from '@/components/common/GradientHeader'
+import PreCallPayment from '@/components/payments/PreCallPayment'
+import { PaymentResult } from '@/types/payments'
 import { videoCallNavigation } from '@/utils/videoCallNavigation'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import React, { useEffect, useState } from 'react'
@@ -27,6 +29,7 @@ interface Expert {
   isOnline: boolean
   avatar?: string
   bgColor?: string
+  walletAddress?: string // Added for payments
 }
 
 const ExpertDetailScreen: React.FC = () => {
@@ -37,6 +40,8 @@ const ExpertDetailScreen: React.FC = () => {
   const [expert, setExpert] = useState<Expert | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [sessionData, setSessionData] = useState<any>(null)
 
   useEffect(() => {
     loadExpert()
@@ -69,6 +74,7 @@ const ExpertDetailScreen: React.FC = () => {
         isOnline: expertData.isOnline || false,
         avatar: '👨‍💼', // Default avatar
         bgColor: '#6366f1', // Default color
+        walletAddress: expertData.walletAddress
       }
 
       setExpert(transformedExpert)
@@ -83,77 +89,117 @@ const ExpertDetailScreen: React.FC = () => {
   const handleBookConsultation = async () => {
     if (!expert) return
 
-    showAlert('Book Consultation', `Book a 5-minute consultation with ${expert.name} for ${expert.sessionRate} SOL?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Start Video Call',
-        onPress: async () => {
-          try {
-            if (!user?.user?.id) {
-              Alert.alert('Error', 'Please log in to book a consultation')
-              return
-            }
+    try {
+      if (!user?.user?.id) {
+        Alert.alert('Error', 'Please log in to book a consultation')
+        return
+      }
 
-            // Check if we have authentication token
-            const AsyncStorage = await import('@react-native-async-storage/async-storage').then((m) => m.default)
-            const token = await AsyncStorage.getItem('token')
-            console.log('Auth token available:', !!token)
+      // Check if we have authentication token
+      const AsyncStorage = await import('@react-native-async-storage/async-storage').then((m) => m.default)
+      const token = await AsyncStorage.getItem('token')
+      console.log('Auth token available:', !!token)
 
-            if (!token) {
-              Alert.alert(
-                'Authentication Required',
-                'You need to log in to book a consultation. Would you like to log in now?',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Log In',
-                    onPress: () => router.push('/(auth)/connect-wallet'),
-                  },
-                ],
-              )
-              return
-            }
+      if (!token) {
+        Alert.alert(
+          'Authentication Required',
+          'You need to log in to book a consultation. Would you like to log in now?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Log In',
+              onPress: () => router.push('/(auth)/connect-wallet'),
+            },
+          ],
+        )
+        return
+      }
 
-            // Check if video calling is available
-            const isAvailable = await videoCallNavigation.isVideoCallAvailable()
-            if (!isAvailable) {
-              Alert.alert('Video Call Unavailable', 'Video calling is not configured. Please check your settings.')
-              return
-            }
+      // Check expert wallet address
+      if (!expert.walletAddress) {
+        Alert.alert('Error', 'Expert wallet address not available. Please try again later.')
+        return
+      }
 
-            // First create a session in the backend
-            const { sessionService } = await import('@/services/sessionService')
+      // Validate wallet address format
+      try {
+        const { PublicKey } = await import('@solana/web3.js')
+        new PublicKey(expert.walletAddress)
+      } catch (error) {
+        console.error('Invalid wallet address format:', expert.walletAddress, error)
+        Alert.alert('Error', 'Invalid expert wallet address format. Please contact support.')
+        return
+      }
 
-            const sessionData = {
-              expertId: expertId as string,
-              shopperId: user.user.id as string,
-              startTime: new Date().toISOString(),
-              amount: expert.sessionRate.toString(),
-            }
+      // Check if video calling is available
+      const isAvailable = await videoCallNavigation.isVideoCallAvailable()
+      if (!isAvailable) {
+        Alert.alert('Video Call Unavailable', 'Video calling is not configured. Please check your settings.')
+        return
+      }
 
-            console.log(sessionData);
-            
+      // Prepare session data
+      const sessionData = {
+        expertId: expertId as string,
+        shopperId: user.user.id as string,
+        startTime: new Date().toISOString(),
+        amount: expert.sessionRate.toString(),
+      }
 
-            console.log('Creating session with data:', sessionData)
-            console.log('User data:', user.user)
-            const session = await sessionService.createSession(sessionData)
-            console.log('Created session:', session)
+      console.log('Prepared session data:', sessionData)
+      setSessionData(sessionData)
+      
+      // Show payment dialog instead of directly creating session
+      setShowPaymentDialog(true)
+    } catch (error) {
+      console.error('Failed to prepare consultation:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to prepare consultation. Please try again.'
+      Alert.alert('Error', errorMessage)
+    }
+  }
 
-            // Now start video call with the created session
-            await videoCallNavigation.startVideoCall({
-              sessionId: session.id,
-              userId: user.user.id,
-              participantIds: [user.user.id, expertId as string],
-            })
-          } catch (error) {
-            console.error('Failed to start video call:', error)
-            const errorMessage =
-              error instanceof Error ? error.message : 'Failed to start video call. Please try again.'
-            Alert.alert('Error', errorMessage)
-          }
-        },
-      },
-    ])
+  const handlePaymentSuccess = async (result: PaymentResult) => {
+    try {
+      console.log('[ExpertDetail] Payment successful:', result.transactionHash)
+      setShowPaymentDialog(false)
+
+      if (!sessionData || !expert) {
+        throw new Error('Session data not available')
+      }
+
+      // Create session with payment transaction hash
+      const { sessionService } = await import('@/services/sessionService')
+      const session = await sessionService.createPaidSession(sessionData, result.transactionHash)
+      
+      console.log('[ExpertDetail] Created paid session:', session)
+
+      // Start video call
+      await videoCallNavigation.startVideoCall({
+        sessionId: session.id,
+        userId: user!.user!.id,
+        participantIds: [user!.user!.id, expertId as string],
+      })
+
+      // Show success message
+      Alert.alert('Payment Successful', 'Your consultation is starting now!')
+      
+    } catch (error) {
+      console.error('[ExpertDetail] Failed to start consultation after payment:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start consultation. Please contact support.'
+      Alert.alert('Error', errorMessage)
+    }
+  }
+
+  const handlePaymentCancel = () => {
+    console.log('[ExpertDetail] Payment cancelled')
+    setShowPaymentDialog(false)
+    setSessionData(null)
+  }
+
+  const handlePaymentError = (errorMessage: string) => {
+    console.error('[ExpertDetail] Payment error:', errorMessage)
+    setShowPaymentDialog(false)
+    Alert.alert('Payment Failed', errorMessage)
   }
 
   if (isLoading) {
@@ -268,6 +314,30 @@ const ExpertDetailScreen: React.FC = () => {
           </View>
         </ScrollView>
         {AlertComponent}
+        
+        {/* Payment Dialog */}
+        {showPaymentDialog && expert && sessionData && (
+          <PreCallPayment
+            visible={showPaymentDialog}
+            expert={{
+              id: expert.id,
+              name: expert.name || 'Unknown Expert',
+              specialization: expert.specialization,
+              sessionRate: expert.sessionRate,
+              walletAddress: expert.walletAddress!,
+              avatar: expert.avatar || '👨‍💼',
+            }}
+            session={{
+              id: 'pending',
+              expertId: sessionData.expertId,
+              shopperId: sessionData.shopperId,
+              amount: expert.sessionRate,
+            }}
+            onPaymentSuccess={handlePaymentSuccess}
+            onPaymentCancel={handlePaymentCancel}
+            onPaymentError={handlePaymentError}
+          />
+        )}
       </SafeAreaView>
     </View>
   )

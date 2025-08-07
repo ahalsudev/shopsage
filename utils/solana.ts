@@ -20,6 +20,10 @@ export class SolanaUtils {
     // Use AppConfig for RPC endpoint, fallback to PLATFORM_CONFIG for compatibility
     const rpcEndpoint = AppConfig.blockchain.rpcUrl || PLATFORM_CONFIG.RPC_ENDPOINT
     this.connection = new Connection(rpcEndpoint, 'confirmed')
+    
+    console.log('[SolanaUtils] Constructor - current network:', this.currentNetwork)
+    console.log('[SolanaUtils] Constructor - program IDs:', this.programIds)
+    console.log('[SolanaUtils] Constructor - AppConfig blockchain:', AppConfig.blockchain)
   }
 
   // Initialize programs with wallet provider
@@ -663,6 +667,24 @@ export class SolanaUtils {
 
   solToLamports(sol: number): number {
     return sol * web3.LAMPORTS_PER_SOL
+  }
+
+  getPublicKeyFromAddress(address: string): PublicKey {
+    try {
+      return new PublicKey(address)
+    } catch (error) {
+      console.error('Invalid public key address:', address, error)
+      throw new Error(`Invalid public key address: ${address}`)
+    }
+  }
+
+  getProgramIds(): { [key: string]: PublicKey } {
+    console.log('[SolanaUtils] getProgramIds called, returning:', this.programIds)
+    if (!this.programIds) {
+      console.error('[SolanaUtils] Program IDs are undefined!')
+      throw new Error('Program IDs not initialized properly')
+    }
+    return this.programIds
   }
 
   async getAccountBalance(publicKey: PublicKey): Promise<number> {

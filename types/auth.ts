@@ -37,6 +37,8 @@ export interface ExpertProfile {
   isVerified: boolean
   isOnline: boolean
   profileImageUrl: string | null
+  walletAddress?: string
+  name?: string
   createdAt?: string
   updatedAt?: string
 }

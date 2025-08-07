@@ -9,6 +9,8 @@ import { localSessionStorage } from '@/services/localSessionStorage'
 import { LoadingSpinner, LoadingState } from '@/components/common/LoadingSpinner'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 import { videoCallNavigation } from '@/utils/videoCallNavigation'
+import PaymentStatusIndicator from '@/components/payments/PaymentStatusIndicator'
+import { paymentService } from '@/services/paymentService'
 
 interface Session {
   id: string
@@ -21,6 +23,8 @@ interface Session {
   cost: number
   rating?: number
   review?: string
+  paymentStatus?: 'unpaid' | 'paid' | 'failed' | 'processing'
+  transactionHash?: string
 }
 
 const SessionsScreen: React.FC = () => {
@@ -29,6 +33,7 @@ const SessionsScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [loadingPaymentStatus, setLoadingPaymentStatus] = useState<{[key: string]: boolean}>({})
 
   useEffect(() => {
     loadSessions()
@@ -65,19 +70,38 @@ const SessionsScreen: React.FC = () => {
         )
       }
 
-      // Convert backend session format to component format
-      const formattedSessions: Session[] = sessionData.map((session: SessionWithDetails) => ({
-        id: session.id,
-        expertId: session.expertId,
-        expertName: session.expertName || 'Unknown Expert',
-        expertSpecialization: session.expertSpecialization || 'General',
-        date: session.startTime,
-        duration: session.endTime
-          ? Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / (1000 * 60))
-          : 5, // Calculate actual duration or default to 5 minutes
-        status: mapSessionStatus(session.status),
-        cost: parseFloat(session.amount || '0'),
-        // TODO: Add rating and review from backend when implemented
+      // Convert backend session format to component format with payment status
+      const formattedSessions: Session[] = await Promise.all(sessionData.map(async (session: SessionWithDetails) => {
+        // Get payment status for each session
+        let paymentStatus: 'unpaid' | 'paid' | 'failed' | 'processing' = 'unpaid'
+        try {
+          if (session.transactionHash) {
+            const payment = await paymentService.getSessionPaymentStatus(session.id)
+            paymentStatus = payment.status
+          } else if (session.paymentStatus === 'completed') {
+            paymentStatus = 'paid'
+          } else if (session.paymentStatus === 'failed') {
+            paymentStatus = 'failed'
+          }
+        } catch (error) {
+          console.warn(`Failed to get payment status for session ${session.id}:`, error)
+        }
+
+        return {
+          id: session.id,
+          expertId: session.expertId,
+          expertName: session.expertName || 'Unknown Expert',
+          expertSpecialization: session.expertSpecialization || 'General',
+          date: session.startTime,
+          duration: session.endTime
+            ? Math.round((new Date(session.endTime).getTime() - new Date(session.startTime).getTime()) / (1000 * 60))
+            : 5, // Calculate actual duration or default to 5 minutes
+          status: mapSessionStatus(session.status),
+          cost: parseFloat(session.amount || '0'),
+          paymentStatus,
+          transactionHash: session.transactionHash,
+          // TODO: Add rating and review from backend when implemented
+        }
       }))
 
       setSessions(formattedSessions)
@@ -135,7 +159,48 @@ const SessionsScreen: React.FC = () => {
   }
 
   const handleSessionPress = async (session: Session) => {
+    // Check payment status before allowing session join
     if (session.status === 'upcoming' || session.status === 'pending') {
+      if (session.paymentStatus === 'unpaid') {
+        Alert.alert(
+          'Payment Required',
+          'This session requires payment before you can join. Please complete the payment to proceed.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Make Payment',
+              onPress: () => {
+                // Navigate to expert detail screen to make payment
+                router.push(`/(expert)/detail?expertId=${session.expertId}`)
+              },
+            },
+          ]
+        )
+        return
+      } else if (session.paymentStatus === 'processing') {
+        Alert.alert(
+          'Payment Processing',
+          'Your payment is still being processed. Please wait a few moments and try again.',
+          [{ text: 'OK' }]
+        )
+        return
+      } else if (session.paymentStatus === 'failed') {
+        Alert.alert(
+          'Payment Failed',
+          'The payment for this session has failed. Please retry payment to join the session.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Retry Payment',
+              onPress: () => {
+                router.push(`/(expert)/detail?expertId=${session.expertId}`)
+              },
+            },
+          ]
+        )
+        return
+      }
+
       Alert.alert('Join Session', `Are you ready to start your consultation with ${session.expertName}?`, [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -192,8 +257,35 @@ const SessionsScreen: React.FC = () => {
         },
       ])
     } else {
-      // TODO: Show session details modal
-      Alert.alert('Session Details', `Session ${session.id} details would be shown here.`)
+      // Show session details with payment info
+      const paymentInfo = session.transactionHash 
+        ? `\n\nTransaction: ${session.transactionHash.substring(0, 8)}...`
+        : ''
+      Alert.alert(
+        'Session Details',
+        `Expert: ${session.expertName}\nStatus: ${session.status}\nPayment: ${session.paymentStatus || 'unknown'}${paymentInfo}`
+      )
+    }
+  }
+
+  const refreshPaymentStatus = async (sessionId: string) => {
+    setLoadingPaymentStatus(prev => ({ ...prev, [sessionId]: true }))
+    
+    try {
+      const paymentStatus = await paymentService.getSessionPaymentStatus(sessionId)
+      
+      // Update the session in the local state
+      setSessions(prevSessions => 
+        prevSessions.map(session => 
+          session.id === sessionId 
+            ? { ...session, paymentStatus: paymentStatus.status, transactionHash: paymentStatus.transactionHash }
+            : session
+        )
+      )
+    } catch (error) {
+      console.error(`Failed to refresh payment status for session ${sessionId}:`, error)
+    } finally {
+      setLoadingPaymentStatus(prev => ({ ...prev, [sessionId]: false }))
     }
   }
 
@@ -230,10 +322,32 @@ const SessionsScreen: React.FC = () => {
           {item.rating && (
             <View style={styles.detailItem}>
               <Text style={styles.detailLabel}>Rating:</Text>
-              <Text style={styles.detailValue}>{'P'.repeat(item.rating)}</Text>
+              <Text style={styles.detailValue}>{'⭐'.repeat(item.rating)}</Text>
             </View>
           )}
         </View>
+
+        {/* Payment Status */}
+        {item.paymentStatus && (
+          <View style={styles.paymentContainer}>
+            <PaymentStatusIndicator 
+              status={item.paymentStatus} 
+              amount={item.cost} 
+              compact={true}
+            />
+            {(item.paymentStatus === 'processing' || item.paymentStatus === 'failed') && (
+              <TouchableOpacity 
+                style={styles.refreshButton}
+                onPress={() => refreshPaymentStatus(item.id)}
+                disabled={loadingPaymentStatus[item.id]}
+              >
+                <Text style={styles.refreshButtonText}>
+                  {loadingPaymentStatus[item.id] ? '⏳' : '🔄'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {item.review && (
           <View style={styles.reviewContainer}>
@@ -242,8 +356,19 @@ const SessionsScreen: React.FC = () => {
         )}
 
         {(item.status === 'upcoming' || item.status === 'pending') && (
-          <View style={styles.actionContainer}>
-            <Text style={styles.actionText}>Tap to join session</Text>
+          <View style={[
+            styles.actionContainer,
+            item.paymentStatus === 'unpaid' && { backgroundColor: '#ef4444' },
+            item.paymentStatus === 'processing' && { backgroundColor: '#f59e0b' },
+            item.paymentStatus === 'failed' && { backgroundColor: '#ef4444' }
+          ]}>
+            <Text style={styles.actionText}>
+              {item.paymentStatus === 'unpaid' && 'Payment Required - Tap to Pay'}
+              {item.paymentStatus === 'processing' && 'Payment Processing - Please Wait'}
+              {item.paymentStatus === 'failed' && 'Payment Failed - Tap to Retry'}
+              {item.paymentStatus === 'paid' && 'Tap to join session'}
+              {!item.paymentStatus && 'Tap to join session'}
+            </Text>
           </View>
         )}
         {item.status === 'active' && (
@@ -519,6 +644,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#92400e',
     fontWeight: '500',
+  },
+  paymentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 4,
+  },
+  refreshButtonText: {
+    fontSize: 16,
   },
 })
 

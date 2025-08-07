@@ -43,7 +43,7 @@ const getBooleanEnvVar = (key: string, fallback: boolean = false): boolean => {
 // Main configuration object
 export const AppConfig: AppConfigInterface = {
   name: 'shopsage-mobile',
-  uri: 'https://shopsage.site',
+  uri: 'shopsage://',
   domain: 'shopsage.site',
   api: {
     useRemoteApi: getBooleanEnvVar('EXPO_PUBLIC_USE_REMOTE_API', false),
@@ -57,7 +57,7 @@ export const AppConfig: AppConfigInterface = {
   },
   blockchain: {
     cluster: (getEnvVar('EXPO_PUBLIC_SOLANA_CLUSTER', 'localnet') as any) || 'localnet',
-    rpcUrl: getEnvVar('EXPO_PUBLIC_SOLANA_RPC_URL', 'http://127.0.0.1:8899'),
+    rpcUrl: getEnvVar('EXPO_PUBLIC_SOLANA_RPC_URL', 'https://api.devnet.solana.com'),
   },
   features: {
     enableBlockchain: getBooleanEnvVar('EXPO_PUBLIC_ENABLE_BLOCKCHAIN', false),

@@ -1,8 +1,13 @@
+import { Cluster } from '@/components/cluster/cluster'
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js'
 import { Connection, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, TransactionSignature } from '@solana/web3.js'
 import { PLATFORM_CONFIG } from '../constants/programs'
-import { solanaUtils } from '../utils/solana'
+// import { solanaUtils } from '../utils/solana' // Temporarily disabled due to initialization issues
+import { AppConfig } from '@/config/environment'
+import { AppIdentity } from '@solana-mobile/mobile-wallet-adapter-protocol'
 import { dataProvider } from './dataProvider'
+
+const identity: AppIdentity = { name: AppConfig.name, uri: AppConfig.uri }
 
 export interface ProcessPaymentRequest {
   sessionId: string
@@ -71,6 +76,7 @@ export const paymentService = {
     expertWalletAddress: string
     amount: number // in SOL
     sessionData?: any
+    selectedCluster: Cluster
   }): Promise<{
     signature: TransactionSignature
     expertAmount: number // in lamports
@@ -78,77 +84,75 @@ export const paymentService = {
     totalAmount: number // in lamports
   }> {
     try {
-      console.log('[PaymentService] Processing SOL consultation payment...', params)
+      console.log('[PaymentService] Restoring full payment logic with detailed logging...');
+
+      // Create connection and get blockhash BEFORE wallet interaction
+      const connection = new Connection(AppConfig.blockchain.rpcUrl, { commitment: 'confirmed' });
+      let blockhash;
+      try {
+        console.log('[PaymentService] Getting latest blockhash before transact...');
+        const latestBlockhash = await connection.getLatestBlockhash('confirmed');
+        blockhash = latestBlockhash.blockhash;
+        console.log('[PaymentService] Latest blockhash obtained before transact:', blockhash);
+      } catch (blockhashError) {
+        console.error('[PaymentService] ERROR getting blockhash before transact:', blockhashError);
+        throw new Error(`Failed to get blockhash: ${blockhashError.message}`);
+      }
 
       return await transact(async (wallet) => {
-        // Authorize wallet for payment
+        // 1. Authorize wallet for payment
+        console.log('[PaymentService] Attempting to authorize wallet...');
         const authResult = await wallet.authorize({
-          cluster: PLATFORM_CONFIG.CLUSTER,
-          identity: {
-            name: 'ShopSage Payment',
-            uri: 'https://shopsage.app',
-            icon: 'favicon.ico',
-          },
-        })
+          chain: params.selectedCluster.id,
+        });
+        console.log('[PaymentService] Wallet authorization successful.');
 
-        const shopperPublicKey = authResult.accounts[0].publicKey
-        const expertPublicKey = new PublicKey(params.expertWalletAddress)
-        const totalLamports = solanaUtils.solToLamports(params.amount)
+        // 2. Get Public Keys
+        const shopperPublicKey = new PublicKey(Buffer.from(authResult.accounts[0].address, 'base64'));
+        const expertPublicKey = new PublicKey(params.expertWalletAddress);
+        console.log(`[PaymentService] Shopper PK: ${shopperPublicKey.toBase58()}, Expert PK: ${expertPublicKey.toBase58()}`);
 
-        // Calculate fee distribution
-        const expertLamports = Math.floor(totalLamports * PLATFORM_CONFIG.EXPERT_COMMISSION_RATE)
-        const platformLamports = totalLamports - expertLamports
+        // 3. Calculate amounts
+        const totalLamports = params.amount * LAMPORTS_PER_SOL;
+        const expertLamports = Math.floor(totalLamports * PLATFORM_CONFIG.EXPERT_COMMISSION_RATE);
+        const platformLamports = totalLamports - expertLamports;
 
-        console.log('[PaymentService] Payment breakdown:', {
-          total: `${params.amount} SOL (${totalLamports} lamports)`,
-          expert: `${solanaUtils.lamportsToSol(expertLamports)} SOL (${expertLamports} lamports)`,
-          platform: `${solanaUtils.lamportsToSol(platformLamports)} SOL (${platformLamports} lamports)`,
-          shopper: shopperPublicKey.toString(),
-          expert: expertPublicKey.toString()
-        })
+        // 4. Build Transaction (using pre-fetched blockhash)
+        const transaction = new Transaction({
+          feePayer: shopperPublicKey,
+          recentBlockhash: blockhash, // Use blockhash from outside transact
+        }).add(
+          SystemProgram.transfer({
+            fromPubkey: shopperPublicKey,
+            toPubkey: expertPublicKey,
+            lamports: expertLamports,
+          }),
+          SystemProgram.transfer({
+            fromPubkey: shopperPublicKey,
+            toPubkey: PLATFORM_CONFIG.PLATFORM_WALLET,
+            lamports: platformLamports,
+          })
+        );
+        console.log('[PaymentService] Transaction built successfully.');
 
-        // Initialize Solana utils
-        await solanaUtils.initializePrograms(shopperPublicKey)
-
-        // Build payment processing transaction
-        const transaction = await solanaUtils.buildProcessPaymentTransaction(
-          shopperPublicKey,
-          expertPublicKey,
-          totalLamports
-        )
-
-        console.log('[PaymentService] Payment transaction built, requesting signature...')
-
-        // Sign and send transaction
-        const signatures = await wallet.signAndSendTransactions({
-          transactions: [transaction],
-        })
-
-        const signature = signatures[0]
-        console.log('[PaymentService] Payment processed successfully!', {
-          signature,
-          expertAmount: expertLamports,
-          platformAmount: platformLamports
-        })
+        // 5. Sign and Send
+        console.log('[PaymentService] Calling wallet.signAndSendTransactions...');
+        const signatures = await wallet.signAndSendTransactions({ transactions: [transaction] });
+        console.log('[PaymentService] Received signatures:', signatures);
 
         return {
-          signature,
+          signature: signatures[0],
           expertAmount: expertLamports,
           platformAmount: platformLamports,
-          totalAmount: totalLamports
-        }
-      })
+          totalAmount: totalLamports,
+        };
+      }, { appIdentity: identity });
     } catch (error) {
-      console.error('[PaymentService] Failed to process consultation payment:', error)
-      
-      // Enhanced error handling
+      console.error('[PaymentService] Failed to process consultation payment:', error);
       if (error.message?.includes('User declined')) {
-        throw new Error('Payment cancelled by user')
-      } else if (error.message?.includes('Insufficient funds')) {
-        throw new Error('Insufficient SOL for payment and transaction fees')
-      } else {
-        throw new Error(`Payment failed: ${error.message || 'Unknown error'}`)
+        throw new Error('Payment cancelled by user');
       }
+      throw new Error(`Payment failed: ${error.message || 'Unknown error'}`);
     }
   },
 
@@ -208,11 +212,11 @@ export const paymentService = {
           },
         })
 
-        const fromPubkey = solanaUtils.getPublicKeyFromAddress(authResult.accounts[0].address)
+        const fromPubkey = authResult.accounts[0].publicKey
         const toPubkey = new PublicKey(params.expertWalletAddress)
 
-        // Create connection to Solana devnet
-        const connection = new Connection('https://api.devnet.solana.com')
+        // Create connection using configured RPC endpoint
+        const connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT)
 
         // Get latest blockhash
         const { blockhash } = await connection.getLatestBlockhash()
@@ -261,7 +265,7 @@ export const paymentService = {
 
   async verifyPayment(transactionHash: string, expectedAmount: string): Promise<boolean> {
     try {
-      const connection = new Connection('https://api.devnet.solana.com')
+      const connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT)
 
       // Get transaction details
       const transaction = await connection.getTransaction(transactionHash, {
@@ -291,7 +295,7 @@ export const paymentService = {
 
   async calculateNetworkFee(): Promise<number> {
     try {
-      const connection = new Connection('https://api.devnet.solana.com')
+      const connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT)
       const recentBlockhash = await connection.getLatestBlockhash()
 
       // Create a dummy transaction to estimate fee
@@ -342,69 +346,13 @@ export const paymentService = {
 
   // New program-integrated payment methods
   async initializePaymentProgram(consultationFee: number): Promise<string> {
-    try {
-      return await transact(async (wallet) => {
-        // Authorize the wallet
-        const authResult = await wallet.authorize({
-          cluster: PLATFORM_CONFIG.CLUSTER,
-          identity: {
-            name: 'ShopSage',
-            uri: 'https://shopsage.site',
-            icon: 'favicon.ico',
-          },
-        })
-
-        const authority = authResult.accounts[0].publicKey
-
-        // Initialize Solana utils with wallet
-        await solanaUtils.initializePrograms(authority)
-
-        // Build initialize payment transaction
-        const transaction = await solanaUtils.buildInitializePaymentTransaction(
-          authority,
-          solanaUtils.solToLamports(consultationFee),
-        )
-
-        return await solanaUtils.executeTransaction(transaction, 'Initialize Payment Program')
-      })
-    } catch (error) {
-      console.error('Failed to initialize payment program:', error)
-      throw new Error('Failed to initialize payment program')
-    }
+    // TODO: Re-implement when solanaUtils initialization issues are resolved
+    throw new Error('Program-based payments temporarily disabled. Use direct SOL transfers.')
   },
 
-  async processConsultationPayment(params: ProgramPaymentParams): Promise<string> {
-    try {
-      return await transact(async (wallet) => {
-        // Authorize the wallet
-        const authResult = await wallet.authorize({
-          cluster: PLATFORM_CONFIG.CLUSTER,
-          identity: {
-            name: 'ShopSage',
-            uri: 'https://shopsage.site',
-            icon: 'favicon.ico',
-          },
-        })
-
-        const shopperPubkey = solanaUtils.getPublicKeyFromAddress(authResult.accounts[0].address)
-        const expertPubkey = new PublicKey(params.expertWalletAddress)
-
-        // Initialize Solana utils with wallet
-        await solanaUtils.initializePrograms(shopperPubkey)
-
-        // Build process payment transaction
-        const transaction = await solanaUtils.buildProcessPaymentTransaction(
-          shopperPubkey,
-          expertPubkey,
-          solanaUtils.solToLamports(params.amount),
-        )
-
-        return await solanaUtils.executeTransaction(transaction, 'Process Consultation Payment')
-      })
-    } catch (error) {
-      console.error('Failed to process consultation payment:', error)
-      throw new Error('Failed to process consultation payment')
-    }
+  async processConsultationPaymentProgram(params: ProgramPaymentParams): Promise<string> {
+    // TODO: Re-implement when solanaUtils initialization issues are resolved
+    throw new Error('Program-based payments temporarily disabled. Use direct SOL transfers.')
   },
 
   async createSessionWithPayment(
@@ -412,131 +360,159 @@ export const paymentService = {
     expertWalletAddress: string,
     amount: number,
   ): Promise<{ sessionTxId: string; paymentTxId?: string }> {
-    try {
-      return await transact(async (wallet) => {
-        // Authorize the wallet
-        const authResult = await wallet.authorize({
-          cluster: PLATFORM_CONFIG.CLUSTER,
-          identity: {
-            name: 'ShopSage',
-            uri: 'https://shopsage.site',
-            icon: 'favicon.ico',
-          },
-        })
-
-        const shopperPubkey = solanaUtils.getPublicKeyFromAddress(authResult.accounts[0].address)
-        const expertPubkey = new PublicKey(expertWalletAddress)
-
-        // Initialize Solana utils with wallet
-        await solanaUtils.initializePrograms(shopperPubkey)
-
-        // First, create the session on-chain
-        const sessionTransaction = await solanaUtils.buildCreateSessionTransaction(
-          sessionId,
-          expertPubkey,
-          shopperPubkey,
-          solanaUtils.solToLamports(amount),
-        )
-
-        const sessionTxId = await solanaUtils.executeTransaction(sessionTransaction, 'Create Session')
-
-        // For now, return only session transaction
-        // Payment will be processed separately when session starts
-        return { sessionTxId }
-      })
-    } catch (error) {
-      console.error('Failed to create session with payment:', error)
-      throw new Error('Failed to create session')
-    }
+    // TODO: Re-implement when solanaUtils initialization issues are resolved
+    throw new Error('Program-based session creation temporarily disabled.')
   },
 
   async startSessionOnChain(sessionId: string, expertWalletAddress: string): Promise<string> {
-    try {
-      return await transact(async (wallet) => {
-        // Authorize the wallet (expert in this case)
-        const authResult = await wallet.authorize({
-          cluster: PLATFORM_CONFIG.CLUSTER,
-          identity: {
-            name: 'ShopSage',
-            uri: 'https://shopsage.site',
-            icon: 'favicon.ico',
-          },
-        })
-
-        const expertPubkey = authResult.accounts[0].publicKey
-
-        // Initialize Solana utils with wallet
-        await solanaUtils.initializePrograms(expertPubkey)
-
-        // Build start session transaction
-        const transaction = await solanaUtils.buildStartSessionTransaction(sessionId, expertPubkey)
-
-        return await solanaUtils.executeTransaction(transaction, 'Start Session')
-      })
-    } catch (error) {
-      console.error('Failed to start session on-chain:', error)
-      throw new Error('Failed to start session')
-    }
+    // TODO: Re-implement when solanaUtils initialization issues are resolved
+    throw new Error('Program-based session management temporarily disabled.')
   },
 
   async endSessionOnChain(sessionId: string, expertWalletAddress: string): Promise<string> {
-    try {
-      return await transact(async (wallet) => {
-        // Authorize the wallet (expert in this case)
-        const authResult = await wallet.authorize({
-          cluster: PLATFORM_CONFIG.CLUSTER,
-          identity: {
-            name: 'ShopSage',
-            uri: 'https://shopsage.site',
-            icon: 'favicon.ico',
-          },
-        })
-
-        const expertPubkey = authResult.accounts[0].publicKey
-
-        // Initialize Solana utils with wallet
-        await solanaUtils.initializePrograms(expertPubkey)
-
-        // Build end session transaction
-        const transaction = await solanaUtils.buildEndSessionTransaction(sessionId, expertPubkey)
-
-        return await solanaUtils.executeTransaction(transaction, 'End Session')
-      })
-    } catch (error) {
-      console.error('Failed to end session on-chain:', error)
-      throw new Error('Failed to end session')
-    }
+    // TODO: Re-implement when solanaUtils initialization issues are resolved
+    throw new Error('Program-based session management temporarily disabled.')
   },
 
   async getSessionFromChain(sessionId: string): Promise<any> {
-    try {
-      // This doesn't require wallet authorization for reading
-      const connection = new Connection(PLATFORM_CONFIG.RPC_ENDPOINT)
-
-      // We need to initialize with a dummy public key for reading
-      const dummyPubkey = new PublicKey('11111111111111111111111111111112')
-      await solanaUtils.initializePrograms(dummyPubkey)
-
-      return await solanaUtils.getSessionAccount(sessionId)
-    } catch (error) {
-      console.error('Failed to get session from chain:', error)
-      return null
-    }
+    // TODO: Re-implement when solanaUtils initialization issues are resolved
+    console.warn('Program-based session reading temporarily disabled.')
+    return null
   },
 
   async getExpertFromChain(expertWalletAddress: string): Promise<any> {
+    // TODO: Re-implement when solanaUtils initialization issues are resolved
+    console.warn('Program-based expert reading temporarily disabled.')
+    return null
+  },
+
+  /**
+   * Process payment specifically for a consultation session
+   * Includes session context and validation
+   */
+  async processSessionPayment(params: {
+    sessionId: string
+    expertId: string
+    expertWalletAddress: string
+    amount: number // in SOL
+    sessionData?: any
+    selectedCluster: Cluster
+  }): Promise<{
+    signature: TransactionSignature
+    expertAmount: number // in lamports
+    platformAmount: number // in lamports
+    totalAmount: number // in lamports
+    sessionId: string
+  }> {
     try {
-      // This doesn't require wallet authorization for reading
-      const expertPubkey = new PublicKey(expertWalletAddress)
+      console.log('[PaymentService] Processing session payment...', params)
 
-      // We need to initialize with a dummy public key for reading
-      const dummyPubkey = new PublicKey('11111111111111111111111111111112')
-      await solanaUtils.initializePrograms(dummyPubkey)
+      // Use existing consultation payment method
+      const paymentResult = await this.processConsultationPayment({
+        sessionId: params.sessionId,
+        expertWalletAddress: params.expertWalletAddress,
+        amount: params.amount,
+        sessionData: params.sessionData,
+        selectedCluster: params.selectedCluster
+      })
 
-      return await solanaUtils.getExpertAccount(expertPubkey)
+      // Add session ID to result
+      return {
+        ...paymentResult,
+        sessionId: params.sessionId
+      }
     } catch (error) {
-      console.error('Failed to get expert from chain:', error)
-      return null
+      console.error('[PaymentService] Session payment failed:', error)
+      throw error
+    }
+  },
+
+  /**
+   * Verify if a session has been paid for
+   */
+  async verifySessionPayment(sessionId: string, transactionHash?: string): Promise<{
+    isPaid: boolean
+    transactionHash?: string
+    amount?: number
+    confirmationStatus?: string
+  }> {
+    try {
+      console.log('[PaymentService] Verifying session payment:', { sessionId, transactionHash })
+
+      if (!transactionHash) {
+        // No transaction hash provided, check backend records
+        try {
+          const { sessionService } = await import('./sessionService')
+          const session = await sessionService.getSession(sessionId)
+          
+          return {
+            isPaid: false, // No transaction hash means unpaid
+            transactionHash: undefined,
+            amount: parseFloat(session.amount || '0')
+          }
+        } catch (error) {
+          console.warn('Failed to check backend session:', error)
+          return { isPaid: false }
+        }
+      }
+
+      // Verify transaction on blockchain
+      const paymentStatus = await this.trackPaymentStatus(transactionHash)
+      
+      return {
+        isPaid: paymentStatus.status === 'confirmed',
+        transactionHash,
+        confirmationStatus: paymentStatus.status,
+        amount: undefined // Would need additional lookup
+      }
+    } catch (error) {
+      console.error('[PaymentService] Failed to verify session payment:', error)
+      return { isPaid: false }
+    }
+  },
+
+  /**
+   * Get payment status for a session
+   */
+  async getSessionPaymentStatus(sessionId: string): Promise<{
+    status: 'unpaid' | 'paid' | 'failed' | 'processing'
+    transactionHash?: string
+    amount?: number
+    timestamp?: Date
+  }> {
+    try {
+      // Get session data with payment info
+      const { sessionService } = await import('./sessionService')
+      const session = await sessionService.getSession(sessionId)
+      
+      if (!session.transactionHash) {
+        return {
+          status: 'unpaid',
+          amount: parseFloat(session.amount || '0')
+        }
+      }
+
+      // Check blockchain status
+      const verification = await this.verifySessionPayment(sessionId, session.transactionHash)
+      
+      let status: 'unpaid' | 'paid' | 'failed' | 'processing' = 'unpaid'
+      
+      if (verification.isPaid) {
+        status = 'paid'
+      } else if (verification.confirmationStatus === 'failed') {
+        status = 'failed'
+      } else if (verification.transactionHash) {
+        status = 'processing'
+      }
+
+      return {
+        status,
+        transactionHash: verification.transactionHash,
+        amount: parseFloat(session.amount || '0'),
+      }
+    } catch (error) {
+      console.error('[PaymentService] Failed to get session payment status:', error)
+      return { status: 'unpaid' }
     }
   },
 
@@ -656,15 +632,9 @@ export const paymentService = {
   isShopSageTransaction(transaction: any): boolean {
     if (!transaction?.transaction?.message) return false
 
-    const programIds = solanaUtils.getProgramIds()
-    const shopsageProgramIds = Object.values(programIds).map(id => id.toString())
-
-    // Check if any instruction involves our programs
-    const instructions = transaction.transaction.message.instructions || []
-    return instructions.some((instruction: any) => {
-      const programId = transaction.transaction.message.accountKeys[instruction.programIdIndex]?.toString()
-      return shopsageProgramIds.includes(programId || '')
-    })
+    // For now, return false since we're not using program transactions
+    // TODO: Re-implement when program initialization issues are resolved
+    return false
   },
 
   /**

@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useContext, useMemo, useState } from 'react'
 import { Cluster } from '@/components/cluster/cluster'
 import { ClusterNetwork } from '@/components/cluster/cluster-network'
-import { clusterApiUrl } from '@solana/web3.js'
+import { RPC_ENDPOINTS } from '@/constants/programs'
 
 export interface ClusterProviderContext {
   selectedCluster: Cluster
@@ -17,13 +17,13 @@ const clusters: Cluster[] = [
   {
     id: 'solana:devnet',
     name: 'Devnet',
-    endpoint: clusterApiUrl('devnet'),
+    endpoint: RPC_ENDPOINTS.devnet,
     network: ClusterNetwork.Devnet,
   },
   {
     id: 'solana:testnet',
     name: 'Testnet',
-    endpoint: clusterApiUrl('testnet'),
+    endpoint: RPC_ENDPOINTS.testnet,
     network: ClusterNetwork.Testnet,
   },
 ]

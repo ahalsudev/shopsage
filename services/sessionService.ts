@@ -61,6 +61,48 @@ export const sessionService = {
     }
   },
 
+  async createPaidSession(sessionData: CreateSessionRequest, transactionHash: string): Promise<SessionResponse> {
+    try {
+      log.info('SessionService: Creating paid session', { sessionData, transactionHash })
+      
+      // Create session with payment information
+      const session = await dataProvider.createSession(sessionData)
+      
+      // Update session with payment details
+      await this.updateSession(session.id, {
+        paymentStatus: 'completed',
+        transactionHash: transactionHash
+      })
+      
+      return session
+    } catch (error) {
+      log.error('Failed to create paid session:', error)
+      throw error
+    }
+  },
+
+  async verifySessionPayment(sessionId: string): Promise<boolean> {
+    try {
+      const { paymentService } = await import('./paymentService')
+      const verification = await paymentService.verifySessionPayment(sessionId)
+      return verification.isPaid
+    } catch (error) {
+      log.error('Failed to verify session payment:', error)
+      return false
+    }
+  },
+
+  async getSessionPaymentStatus(sessionId: string): Promise<'unpaid' | 'paid' | 'failed' | 'processing'> {
+    try {
+      const { paymentService } = await import('./paymentService')
+      const status = await paymentService.getSessionPaymentStatus(sessionId)
+      return status.status
+    } catch (error) {
+      log.error('Failed to get session payment status:', error)
+      return 'unpaid'
+    }
+  },
+
   async getSession(sessionId: string): Promise<SessionResponse> {
     try {
       log.info('SessionService: Getting session', { sessionId })

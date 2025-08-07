@@ -48,7 +48,7 @@ export const TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9
 // Network-specific RPC endpoints
 export const RPC_ENDPOINTS = {
   localnet: 'http://127.0.0.1:8899',
-  devnet: 'https://api.devnet.solana.com',
+  devnet: 'https://devnet.helius-rpc.com/?api-key=69c0409a-f960-4fe7-a7c0-a5a9023f247c',
   testnet: 'https://api.testnet.solana.com',
   'mainnet-beta': 'https://api.mainnet-beta.solana.com',
 } as const
@@ -71,9 +71,16 @@ export function getCurrentNetwork(): SolanaNetwork {
   return clusterMap[AppConfig.blockchain.cluster] || 'localnet'
 }
 
-// Get RPC endpoint for current network (use AppConfig)
+// Get RPC endpoint for current network (use AppConfig with fallback)
 export function getCurrentRpcEndpoint(): string {
-  return AppConfig.blockchain.rpcUrl
+  // Use AppConfig RPC URL if available, otherwise fall back to network-specific endpoint
+  if (AppConfig.blockchain.rpcUrl) {
+    return AppConfig.blockchain.rpcUrl
+  }
+  
+  // Fallback to network-specific RPC endpoint
+  const currentNetwork = getCurrentNetwork()
+  return RPC_ENDPOINTS[currentNetwork]
 }
 
 // Platform configuration
