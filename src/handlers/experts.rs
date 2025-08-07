@@ -50,6 +50,8 @@ pub struct ExpertDetailResponse {
   pub is_verified: bool,
   #[serde(rename = "profileImageUrl")]
   pub profile_image_url: Option<String>,
+  #[serde(rename = "walletAddress")]
+  pub wallet_address: String,
 }
 
 pub async fn list_experts(
@@ -157,6 +159,7 @@ pub async fn get_expert_by_id(
         } else {
           Some(expert_profile.profile_image_url)
         },
+        wallet_address: user.wallet_address,
       };
 
       Ok(Json(response))

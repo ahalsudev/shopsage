@@ -183,10 +183,10 @@ fn profile_routes() -> Router<AppState> {
 fn session_routes() -> Router<AppState> {
   Router::new()
     .route("/", post(sessions::create_session))
-    .route("/list", get(sessions::list_sessions))
+    .route("/expert/{expert_id}", get(sessions::list_sessions_by_expert))
+    .route("/shopper/{shopper_id}", get(sessions::list_sessions_by_shopper))
     .route("/{id}", get(sessions::get_session))
-    .route("/{id}/update", post(sessions::update_session))
-    .layer(from_fn(middleware::auth::auth_middleware))
+    .route("/{id}", put(sessions::update_session))
 }
 
 fn auth_routes() -> Router<AppState> {
